@@ -2,11 +2,14 @@ import os
 import re
 
 from flask import Flask, request, jsonify
+from functools import wraps
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import (
     create_access_token, 
     create_refresh_token, 
+    verify_jwt_in_request, 
+    get_jwt_identity,
     JWTManager,
 )
 
@@ -29,7 +32,25 @@ def api_response(data=None, message=None, status=200):
         response['message'] = message
     if data is not None:
         response['data'] = data
-    return jsonify(response), status	
+    return jsonify(response), status
+
+
+def token_required(func):
+    """Create decorator for API authentication using JWT"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            verify_jwt_in_request()
+            username = get_jwt_identity()
+            current_user = users_db.get(username)
+
+            if not current_user:
+                return api_response(message="User does not exist", status=404)
+
+            return func(current_user, *args, **kwargs)
+        except Exception as e:
+            return api_response(message=f"Token is invalid: {str(e)}", status=401)
+    return wrapper	
 
 
 @app.route('/register', methods=['POST'])
@@ -92,6 +113,13 @@ def login():
             "refresh_token": refresh_token,
             "user": users_db[username]['profile'],
         })
+
+
+@app.route('/profile', methods=['GET'])
+@token_required
+def get_profile(current_user):
+    """UC04: Lấy thông tin hồ sơ của người dùng hiện tại."""
+    return api_response(data=current_user['profile'])
 
 
 if __name__ == "__main__":
