@@ -14,6 +14,7 @@ from flask_jwt_extended import (
 EMAIL_REGEX = re.compile(r"^[\w\.-]+@[\w\.-]+\.\w+$")   #   Regex Transform to validate email
 
 app = Flask(__name__)
+jwt = JWTManager(app)
 app.secret_key = os.environ.get("SECRET_KEY", "__dev_secret_key__")
 
 users_db = {}
@@ -54,15 +55,44 @@ def register():
 
     pw_hash = generate_password_hash(password)
     profile = {
-        'username': username,
-        'email': email,
-        'full_name': full_name,
-        'profile_picture': 'default.png',
-        'bio': '',
-        'created_at': int(datetime.now().timestamp())
+        "username": username,
+        "email": email,
+        "full_name": full_name,
+        "profile_picture": "blog.png",
+        "bio": "",
+        "created_at": int(datetime.now().timestamp())
     }
     users_db[username] = {'password': pw_hash, 'profile': profile}
     return api_response(data=profile, message='User registered successfully')
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json() or {}
+    username = data.get('username')
+    password = data.get('password')
+
+    # Kiểm tra xem tên đăng nhập có tồn tại trong hệ thống hay không
+    if username not in users_db:
+        return jsonify({'error': 'Invalid username or password'}), 401
+
+    # Kiểm tra mật khẩu đã nhập có khớp với mật khẩu đã mã hóa hay không
+    if not check_password_hash(users_db[username]['password'], password):
+        return jsonify({'error': 'Invalid username or password'}), 401
+
+    # Nếu tên đăng nhập và mật khẩu đều đúng, tạo access token và refresh token
+    access_token = create_access_token(identity=username)
+    refresh_token = create_refresh_token(identity=username)
+
+    # Trả về response thành công kèm theo token và thông tin người dùng
+    return api_response(
+        message='Login successful',
+        data={
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "user": users_db[username]['profile'],
+        })
+
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
