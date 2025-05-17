@@ -23,13 +23,13 @@ def token_required(func):
     def wrapper(*args, **kwargs):
         try:
             verify_jwt_in_request()
-            username = get_jwt_identity()
-            
-            current_user = User.query.filter_by(username=username).first()
-            if not current_user:
-                return NotFound(f"User {current_user.username} not found!")
-
-            return func(current_user, *args, **kwargs)
+            user_id = get_jwt_identity()
         except Exception as error:
             return Unauthorized(f"Token is invalid: {str(error)}")
+        
+        current_user = User.query.filter_by(id=int(user_id)).first()
+        if not current_user:
+            return NotFound(f"User {current_user.username} not found!")
+
+        return func(current_user=current_user, *args, **kwargs)
     return wrapper	

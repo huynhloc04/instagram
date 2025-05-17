@@ -9,6 +9,7 @@ from app.core.handlers import register_error_handlers
 from app.core.extensions import register_extensions
 from app.v1.routes.auth import auth_bp
 from app.v1.routes.user import user_bp
+from app.logs.config import setup_logging
 
 load_dotenv()
 
@@ -32,5 +33,8 @@ def create_app():
 
     #   Register error handlers
     register_error_handlers(app)
+
+    #   Setup logging
+    setup_logging(app)
 
     return app

@@ -47,3 +47,10 @@ class UserLoginResponse(BaseModel):
     access_token: str
     refresh_token: str
     user: UserRead
+
+
+class UserEdit(BaseModel):
+    username: str | None = None
+    email: EmailStr | None = None
+    fullname: str | None = None
+    bio: str | None = None

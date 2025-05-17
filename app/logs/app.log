@@ -1,0 +1,112 @@
+[2025-05-17 15:39:06,451] INFO in auth: Login endpoint called
+[2025-05-17 15:39:06,653] INFO in auth: User suynguyen login successfully.
+[2025-05-17 15:39:09,122] INFO in auth: Login endpoint called
+[2025-05-17 15:39:09,298] INFO in auth: User suynguyen login successfully.
+[2025-05-17 15:40:29,504] INFO in user: View profile endpoint called!
+[2025-05-17 15:40:42,542] INFO in user: View other profile endpoint called!
+[2025-05-17 15:41:45,069] INFO in user: View other profile endpoint called!
+[2025-05-17 15:41:45,075] ERROR in handlers: 404 Not Found: User with id 100 not found.
+Traceback (most recent call last):
+  File "/home/user/lochuynhinstagram/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/app/v1/utils.py", line 32, in wrapper
+    return func(current_user=current_user, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/app/v1/routes/user.py", line 50, in view_other_profile
+    raise NotFound(f"User with id {user_id} not found.")
+werkzeug.exceptions.NotFound: 404 Not Found: User with id 100 not found.
+[2025-05-17 15:44:58,226] INFO in user: View other profile endpoint called!
+[2025-05-17 15:45:45,774] INFO in user: View profile endpoint called!
+[2025-05-17 15:45:53,195] INFO in user: Edit profile endpoint called!
+[2025-05-17 15:46:18,272] INFO in user: Edit profile endpoint called!
+[2025-05-17 15:47:35,881] INFO in user: Edit profile endpoint called!
+[2025-05-17 15:48:39,745] INFO in user: Edit profile endpoint called!
+[2025-05-17 15:49:12,029] INFO in user: Edit profile endpoint called!
+[2025-05-17 15:49:12,030] ERROR in handlers: 409 Conflict: Username cannot be the same as the current username.
+Traceback (most recent call last):
+  File "/home/user/lochuynhinstagram/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/app/v1/utils.py", line 34, in wrapper
+    return func(current_user=current_user, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/app/v1/routes/user.py", line 32, in edit_profile
+    check_user_edit(data=parsed_data, current_user=current_user)
+  File "/home/user/lochuynhinstagram/app/v1/controllers/user.py", line 23, in check_user_edit
+    raise Conflict("Username cannot be the same as the current username.")
+werkzeug.exceptions.Conflict: 409 Conflict: Username cannot be the same as the current username.
+[2025-05-17 15:49:22,220] INFO in user: Edit profile endpoint called!
+[2025-05-17 15:49:22,256] INFO in user: User ohbama updated profile successfully.
+[2025-05-17 15:56:01,538] INFO in auth: Login endpoint called
+[2025-05-17 15:56:01,557] ERROR in handlers: 401 Unauthorized: Incorrect username or password!
+Traceback (most recent call last):
+  File "/home/user/lochuynhinstagram/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/app/v1/routes/auth.py", line 45, in login
+    user = check_user_login(username=username, password=password)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/app/v1/controllers/auth.py", line 21, in check_user_login
+    raise Unauthorized(f"Incorrect username or password!")
+werkzeug.exceptions.Unauthorized: 401 Unauthorized: Incorrect username or password!
+[2025-05-17 15:56:11,215] INFO in auth: Login endpoint called
+[2025-05-17 15:56:11,406] INFO in auth: User ohbama login successfully.
+[2025-05-17 15:56:23,811] INFO in user: View profile endpoint called!
+[2025-05-17 15:56:56,408] INFO in user: Edit profile endpoint called!
+[2025-05-17 15:56:56,426] INFO in user: User manila updated profile successfully.
+[2025-05-17 16:04:29,405] INFO in auth: Login endpoint called
+[2025-05-17 16:04:29,425] ERROR in handlers: 401 Unauthorized: Incorrect username or password!
+Traceback (most recent call last):
+  File "/home/user/lochuynhinstagram/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/app/v1/routes/auth.py", line 45, in login
+    user = check_user_login(username=username, password=password)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/app/v1/controllers/auth.py", line 21, in check_user_login
+    raise Unauthorized(f"Incorrect username or password!")
+werkzeug.exceptions.Unauthorized: 401 Unauthorized: Incorrect username or password!
+[2025-05-17 16:04:50,873] INFO in auth: Login endpoint called
+[2025-05-17 16:04:51,094] INFO in auth: User manila login successfully.
+[2025-05-17 16:07:22,470] INFO in auth: Login endpoint called
+[2025-05-17 16:07:22,628] INFO in auth: User manila login successfully.
+[2025-05-17 16:07:31,705] INFO in user: View profile endpoint called!
+[2025-05-17 16:07:49,637] INFO in user: Edit profile endpoint called!
+[2025-05-17 16:07:49,663] INFO in user: User suynguyen updated profile successfully.
+[2025-05-17 16:08:00,486] INFO in user: View profile endpoint called!
+[2025-05-17 16:09:53,148] INFO in user: Edit profile endpoint called!
+[2025-05-17 16:10:10,491] INFO in user: Edit profile endpoint called!
+[2025-05-17 16:10:10,493] ERROR in handlers: 409 Conflict: Username cannot be the same as the current username.
+Traceback (most recent call last):
+  File "/home/user/lochuynhinstagram/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/app/v1/utils.py", line 34, in wrapper
+    return func(current_user=current_user, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/lochuynhinstagram/app/v1/routes/user.py", line 32, in edit_profile
+    check_user_edit(data=parsed_data, current_user=current_user)
+  File "/home/user/lochuynhinstagram/app/v1/controllers/user.py", line 23, in check_user_edit
+    raise Conflict("Username cannot be the same as the current username.")
+werkzeug.exceptions.Conflict: 409 Conflict: Username cannot be the same as the current username.
+[2025-05-17 16:10:17,147] INFO in user: Edit profile endpoint called!
+[2025-05-17 16:10:17,160] INFO in user: User suynguy1en updated profile successfully.
+[2025-05-17 16:11:13,780] INFO in user: View other profile endpoint called!
+[2025-05-17 16:11:20,034] INFO in user: View other profile endpoint called!
+[2025-05-17 16:11:27,758] INFO in auth: Logout endpoint called
