@@ -1,7 +1,9 @@
 from flask import jsonify
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 from functools import wraps
-from app.v1 import users_db
+from werkzeug.exceptions import NotFound, Unauthorized
+
+from app.v1.models import User
 
 def api_response(data=None, message=None, status=200):
     response = {
@@ -22,12 +24,12 @@ def token_required(func):
         try:
             verify_jwt_in_request()
             username = get_jwt_identity()
-            current_user = users_db.get(username)
-
+            
+            current_user = User.query.filter_by(username=username).first()
             if not current_user:
-                return api_response(message="User does not exist", status=404)
+                return NotFound(f"User {current_user.username} not found!")
 
             return func(current_user, *args, **kwargs)
-        except Exception as e:
-            return api_response(message=f"Token is invalid: {str(e)}", status=401)
+        except Exception as error:
+            return Unauthorized(f"Token is invalid: {str(error)}")
     return wrapper	

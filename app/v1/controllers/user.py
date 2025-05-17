@@ -1,12 +1,17 @@
-from flask import Blueprint
+from sqlalchemy.orm import Session
+from app.v1.schemas.user import UserCreate
+from app.v1.models.user import User
 
-from app.v1.utils import api_response, token_required
-from app.v1 import root_bp
+def create_user(data: UserCreate, session: Session) -> User:
+    user = User(
+        username=data.username,
+        email=data.email,
+        fullname=data.fullname,
+        bio=data.bio,
+        profile_picture=data.profile_picture,
+    )
+    user.set_password(data.password)
+    session.add(user)
+    session.flush()
+    return user
 
-user_bp = Blueprint('users', __name__, url_prefix='/users')
-
-
-@user_bp.route('/profile', methods=['GET'])
-@token_required
-def get_profile(current_user):
-    return api_response(data=current_user['profile'])

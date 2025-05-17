@@ -8,6 +8,7 @@
     pkgs.python3 
     pkgs.mysql
     pkgs.openssh
+    pkgs.python311Packages.flask
   ];
   
   services = {
