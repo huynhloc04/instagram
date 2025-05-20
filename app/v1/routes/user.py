@@ -3,14 +3,16 @@ from werkzeug.exceptions import BadRequest, NotFound
 
 from app.core.database import db_session 
 from app.v1.utils import api_response, token_required
-from app.v1.models.user import User
+from app.v1.models import User, Post
+from app.v1.schemas.base import Pagination
 from app.v1.schemas.user import UserEdit, UserRead
+from app.v1.schemas.post import PostReadList, PostRead
 from app.v1.controllers.user import check_user_edit
 
-user_bp = Blueprint('users', __name__, url_prefix='/users')
+userRoute = Blueprint('users', __name__, url_prefix='/users')
 
 
-@user_bp.route('/profile', methods=['GET'])
+@userRoute.route('/profile', methods=['GET'])
 @token_required
 def view_profile(current_user: User):
     current_app.logger.info("View profile endpoint called!")
@@ -18,22 +20,29 @@ def view_profile(current_user: User):
     return api_response(data=response.dict(), status=200)
 
 
-@user_bp.route('/profile', methods=['PUT'])
+@userRoute.route('/profile', methods=['PUT'])
 @token_required
 def edit_profile(current_user: User):
     current_app.logger.info("Edit profile endpoint called!")
+    
     with db_session() as session:
-        # current_app.logger.info("User edit with data:", request.get_json())
         json_data = request.get_json(force=True) or {}
-        parsed_data = UserEdit.parse_obj(json_data)
         if not json_data:
             raise BadRequest("Please provide data to update.")
+        try:
+            parsed_data = UserEdit.parse_obj(json_data)
+        except ValidationError as exec:
+            raise BadRequest(str(exec.error()))
+
         #   Check username or email already exist
         check_user_edit(data=parsed_data, current_user=current_user)
         #   Update user profile
-        for field_to_update, value in parsed_data.dict(exclude_unset=True).items():
+        for field_to_update, value in parsed_data.dict(
+            exclude_unset=True, exclude_none=True
+        ).items():
             setattr(current_user, field_to_update, value)
         session.commit()
+
         current_app.logger.info(f"User {current_user.username} updated profile successfully.")
         response = UserRead.from_orm(current_user)
         return api_response(
@@ -43,7 +52,7 @@ def edit_profile(current_user: User):
         )
 
 
-@user_bp.route('/<int:user_id>/profile', methods=['GET'])
+@userRoute.route('/<int:user_id>/profile', methods=['GET'])
 @token_required
 def view_other_profile(user_id: int, current_user: User):
     current_app.logger.info("View other profile endpoint called!")
@@ -52,3 +61,34 @@ def view_other_profile(user_id: int, current_user: User):
         raise NotFound(f"User with id {user_id} not found.")
     response = UserRead.from_orm(user)
     return api_response(data=response.dict(), status=200)
+
+
+@userRoute.route("/<int:user_id>/posts", methods=['GET'])
+@token_required
+def get_list_post(user_id: int, current_user: User):
+    current_app.logger.info("Retieve all posts endpoint called.")
+    with db_session() as session:
+        # Get pagination parameters from query string
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        posts = Post.query.filter(
+            Post.user_id==user_id, Post.deleted==False
+        ).order_by(
+            Post.created_at.desc()
+        ).paginate(page=page, per_page=per_page)
+
+        response = PostReadList(
+            posts=[PostRead.from_post(post, include_user=True) for post in posts.items],
+            pagination=Pagination(
+                page=posts.page,
+                per_page=posts.per_page,
+                total=posts.total,
+                pages=posts.pages
+            )
+        )
+        current_app.logger.info(f"Retrieved all posts for user {current_user.id} successfully.")
+        return api_response(
+            data=response.dict(),
+            message='Retrieved all posts successfully.',
+            status=200,
+        )

@@ -11,22 +11,30 @@ from app.v1.controllers.user import create_user
 from app.v1.controllers.auth import check_user_register, check_user_login
 
 
-auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+authRoute = Blueprint('auth', __name__, url_prefix='/auth')
 
-@auth_bp.route('/register', methods=['POST'])
+@authRoute.route('/register', methods=['POST'])
 def register():
     current_app.logger.info("Register endpoint called")
+
     with db_session() as session:
         # 1. Serialize and validate input JSON with Pydantic
-        json_data = request.get_json() or {}
-        parsed_data = UserCreate.parse_obj(json_data)
+        json_data = request.get_json()
+        if not json_data:
+            raise BadRequest("Please provide data to update.")
+        try:
+            parsed_data = UserCreate.parse_obj(json_data)
+        except ValidationError as exec:
+            raise BadRequest(str(exec.error()))
+        
         check_user_register(data=parsed_data)
+
         #   2. Create user
         created_user = create_user(data=parsed_data, session=session)
+        session.commit()
+        
         #   3. Deserialize User DB model to JSON response, convert from ORM-object to Pydantic object
         response = UserRead.from_orm(created_user)
-        #   4. Commit the transaction if all operations are successful
-        session.commit()
         current_app.logger.info(f"User registered with username: {created_user.username} successfully.")
         return api_response(    
             data=response.dict(),   #   Also can be used as response.json()
@@ -35,12 +43,14 @@ def register():
         )
 
 
-@auth_bp.route('/login', methods=['POST'])
+@authRoute.route('/login', methods=['POST'])
 def login():
     current_app.logger.info("Login endpoint called")
-    data = request.get_json() or {}
-    username = data.get('username')
-    password = data.get('password')
+    json_data = request.get_json()
+    if not json_data:
+        raise BadRequest("Please provide data to update.")
+    username = json_data.get('username')
+    password = json_data.get('password')
 
     user = check_user_login(username=username, password=password)
     #   Create access_token and refresh_token
@@ -59,9 +69,9 @@ def login():
     )
 
 
-@auth_bp.route('/logout', methods=['POST'])
+@authRoute.route('/logout', methods=['POST'])
 def logout():
-    current_app.logger.info("Logout endpoint called")
+    current_app.logger.info("Logout successfully.")
     # Since JWTs are stateless, we don't need to do anything here.
     # The client should simply discard the JWT token.
     return api_response(message='Logout successfully.')

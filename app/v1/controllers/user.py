@@ -4,14 +4,9 @@ from werkzeug.exceptions import Conflict, Unauthorized
 from app.v1.schemas.user import UserCreate, UserEdit
 from app.v1.models.user import User
 
+
 def create_user(data: UserCreate, session: Session) -> User:
-    user = User(
-        username=data.username,
-        email=data.email,
-        fullname=data.fullname,
-        bio=data.bio,
-        profile_picture=data.profile_picture,
-    )
+    user = User(**data.dict(exclude={"password"}))
     user.set_password(data.password)
     session.add(user)
     session.flush()
