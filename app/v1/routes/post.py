@@ -8,6 +8,7 @@ from werkzeug.exceptions import BadRequest, NotFound, Conflict, Forbidden, Inter
 from app.core.database import db_session
 from app.core.config import settings
 from app.v1.models import Post, User, Like
+from app.v1.schemas.base import Pagination
 from app.v1.schemas.post import PostCreate, PostRead, PostEdit, PostReadList
 from app.v1.controllers.post import create_post, update_post
 from app.v1.enums import PostStatus
@@ -35,9 +36,44 @@ def get_post(post_id: int, current_user: User):
         )
         current_app.logger.info(f"Post with id {post_id} retrieved successfully.")
         return api_response(
+            # data=PostRead(**parsed_post).dict(),
             data=parsed_post,
             message='Post retrieved successfully.',
             status=200,
+        )
+
+    
+@postRoute.route("/newsfeed", methods=["GET"])
+@token_required
+def view_news_feed(current_user: User):
+    current_app.logger.info("News feed endpoint called.")
+
+    # Get pagination parameters from query string
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+
+    with db_session() as session:
+        posts = Post.query.filter_by(status=PostStatus.PUBLIC, deleted=False) \
+            .order_by(Post.created_at.desc())   \
+            .paginate(page=page, per_page=per_page)
+            
+        news_feed = PostReadList(
+            posts=[
+                post.to_dict(
+                    current_user=current_user, include_user=True, include_like=True
+                )
+                for post in posts
+            ],
+            pagination=Pagination(
+                total=posts.total,
+                page=posts.page,
+                per_page=posts.per_page,
+                pages=posts.pages,
+            ),
+        )
+        current_app.logger.info("View news feed successfully.")
+        return api_response(
+            data=news_feed.dict(), message="View news feed successfully.", status=200
         )
 
 

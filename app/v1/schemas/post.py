@@ -50,7 +50,7 @@ class PostRead(BaseModel):
 
 
 class PostReadList(BaseModel):
-    posts: list[PostRead]
+    posts: list
     pagination: Pagination
 
 
