@@ -13,7 +13,9 @@ from app.core.extensions import register_extensions
 from app.v1.routes.auth import authRoute
 from app.v1.routes.user import userRoute
 from app.v1.routes.post import postRoute
-from app.core.log_config import setup_logging
+from app.logs.config import setup_logging
+from app.v1.storage import bucket
+from flask import redirect
 
 load_dotenv()
 
@@ -21,12 +23,15 @@ rootRoute = Blueprint("root", __name__,  url_prefix='/api/v1')
 
 @rootRoute.route("/<string:image_name>", methods=['GET'])
 def serve_image(image_name: str):
-    image_path = os.path.join(
-        os.getcwd(), settings.UPLOAD_FOLDER, image_name
-    )
-    if not os.path.exists(image_path):
-      raise NotFound("File not found.")
-    return send_file(image_path)
+    try:
+        gcs_filename = os.path.join(settings.POST_BUCKET_FOLDER, image_name)
+        blob = bucket.blob(gcs_filename)
+        if not blob.exists():
+            abort(404, description="File not found.")
+
+        return blob.public_url
+    except Exception as error:
+        raise IndentationError(str(error))
 
 
 def create_app():
@@ -35,6 +40,7 @@ def create_app():
     app.config["SECRET_KEY"] = settings.SECRET_KEY
     app.config["SQLALCHEMY_DATABASE_URI"] = settings.db_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    # app.config.from_mapping(settings.dict())
 
     #   Register extensions
     register_extensions(app)

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, create_refresh_token
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -5,6 +7,7 @@ from datetime import datetime
 from werkzeug.exceptions import InternalServerError
 
 from app.core.database import db_session 
+from app.core.config import settings
 from app.v1.utils import api_response
 from app.v1.schemas.user import UserCreate, UserRead, UserLoginResponse
 from app.v1.controllers.user import create_user
@@ -34,10 +37,10 @@ def register():
         session.commit()
         
         #   3. Deserialize User DB model to JSON response, convert from ORM-object to Pydantic object
-        response = UserRead.from_orm(created_user)
+        registerd_user = UserRead.from_orm(created_user)
         current_app.logger.info(f"User registered with username: {created_user.username} successfully.")
         return api_response(    
-            data=response.dict(),   #   Also can be used as response.json()
+            data=registerd_user.dict(),   #   Also can be used as registerd_user.json()
             message='User registered successfully.', 
             status=201,
         )
@@ -54,10 +57,16 @@ def login():
 
     user = check_user_login(username=username, password=password)
     #   Create access_token and refresh_token
-    access_token = create_access_token(identity=str(user.id))
-    refresh_token = create_refresh_token(identity=str(user.id))
+    access_token = create_access_token(
+        identity=str(user.id), 
+        expires_delta=timedelta(minutes=int(settings.JWT_ACCESS_TOKEN_EXPIRES))
+    )
+    refresh_token = create_refresh_token(
+        identity=str(user.id),
+        expires_delta=timedelta(minutes=int(settings.JWT_REFRESH_TOKEN_EXPIRES))
+    )
     
-    response = UserLoginResponse(
+    login_user = UserLoginResponse(
         access_token=access_token,
         refresh_token=refresh_token,
         user=UserRead.from_orm(user)
@@ -65,7 +74,7 @@ def login():
     current_app.logger.info(f"User {username} login successfully.")
     return api_response(
         message='Login successfully.',
-        data=response.dict(),
+        data=login_user.dict(),
     )
 
 

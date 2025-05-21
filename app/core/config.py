@@ -22,6 +22,12 @@ class Settings(BaseSettings):
 
     UPLOAD_FOLDER: str
 
+    BUCKET_NAME: str
+    POST_BUCKET_FOLDER: str
+
+    JWT_ACCESS_TOKEN_EXPIRES: str
+    JWT_REFRESH_TOKEN_EXPIRES: str
+
     @property
     def db_url(self) -> str:
         return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"

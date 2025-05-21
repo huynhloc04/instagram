@@ -5,6 +5,7 @@ __pycache__
 
 *.log
 *.txt
+gcs_key.json
 
 .idx/.data/
 app/static/

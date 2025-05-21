@@ -1,8 +1,8 @@
-"""init database
+"""Initialize database
 
-Revision ID: 3920cd933bef
+Revision ID: d789dfd68853
 Revises: 
-Create Date: 2025-05-19 02:52:57.877639
+Create Date: 2025-05-20 09:51:21.917282
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '3920cd933bef'
+revision = 'd789dfd68853'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -43,6 +43,7 @@ def upgrade():
     sa.Column('caption', sa.Text(), nullable=True),
     sa.Column('image_name', sa.String(length=255), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('deleted', sa.Boolean(), nullable=False),
     sa.Column('status', sa.Enum('DRAFT', 'PUBLIC', name='post_status'), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.Integer(), nullable=False),

@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
 from app.v1.models.base import BaseModel
+from app.v1.models.follow import Follow
 
 class User(BaseModel):
     __tablename__ = 'users'
@@ -23,3 +24,25 @@ class User(BaseModel):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    def to_dict(self, viewer=None, excludes: list[str] = None) -> dict:
+        user_dict = {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "fullname": self.fullname,
+            "bio": self.bio,
+            "profile_picture": self.profile_picture,
+            "created_at": self.created_at,
+            "modified_at": self.modified_at,
+        }
+        if viewer:
+            # user_dict["posts"] = None
+            user_dict["num_to_follow"] = Follow.query.filter_by(follower_id=self.id).count()
+            user_dict["num_followed"] = Follow.query.filter_by(following_id=self.id).count()
+            user_dict["is_following"] = Follow.query.filter_by(
+                follower_id=viewer.id, following_id=self.id
+            ).first() is not None   #   or None
+        if excludes:
+            for exclude in excludes:
+                user_dict.pop(exclude, None)
+        return user_dict

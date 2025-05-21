@@ -6,13 +6,14 @@ from werkzeug.exceptions import NotFound
 from app.v1.schemas.user import UserRead
 from app.v1.models import User, Post
 from app.v1.schemas.base import Pagination
+from app.v1.enums import PostStatus
 
 
 class PostCreate(BaseModel):
     caption: str
     image_name: str
     user_id: int
-    status: str = "draft"
+    status: str = PostStatus.PUBLIC.value
 
 
 class PostRead(BaseModel):
@@ -29,15 +30,23 @@ class PostRead(BaseModel):
         "from_attributes": True
     }
 
-    @classmethod
-    def from_post(cls, post: Post, include_user: bool = False):
-        post_data = cls.from_orm(post)
-        if include_user:
-            user = User.query.get(post.user_id)
-            if not user:
-                raise NotFound(f"User with id {post.user_id} not found")
-            post_data.user = UserRead.from_orm(user)
-        return post_data
+    # @classmethod
+    # def from_post(cls, post: Post, include_user: bool = False):
+    #     post_dict = {
+    #         "id": post.id,
+    #         "created_at": post.created_at,
+    #         "modified_at": post.modified_at,
+    #         "caption": post.caption,
+    #         "image_name": post.image_name,
+    #         "status": post.status,
+    #         "deleted": post.deleted,
+    #     }
+    #     if include_user:
+    #         user = User.query.get(post.user_id)
+    #         if not user:
+    #             raise NotFound(f"User with id {post.user_id} not found")
+    #         post_dict["user"] = UserRead.from_orm(user)
+    #     return cls(**post_dict)
 
 
 class PostReadList(BaseModel):

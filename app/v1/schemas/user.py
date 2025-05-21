@@ -4,6 +4,10 @@ from datetime import datetime
 from pydantic import BaseModel, EmailStr, validator
 from werkzeug.exceptions import BadRequest
 
+from app.v1.models.follow import Follow
+from app.v1.models.user import User
+from app.v1.schemas.base import Pagination
+
 
 class UserCreate(BaseModel):
     username: str
@@ -54,3 +58,8 @@ class UserEdit(BaseModel):
     email: EmailStr | None = None
     fullname: str | None = None
     bio: str | None = None
+
+
+class UserReadList(BaseModel):
+    users: list[UserRead]
+    pagination: Pagination

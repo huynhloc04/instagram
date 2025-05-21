@@ -35,3 +35,4 @@ def update_post(post: Post, data: PostEdit, session: Session) -> None:
         exclude_unset=True, exclude_none=True
     ).items():
         setattr(post, field_to_update, value)
+    return post

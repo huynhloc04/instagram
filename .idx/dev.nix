@@ -6,9 +6,8 @@
   # Use https://search.nixos.org/packages to find packages
   packages = [ 
     pkgs.python3 
-    pkgs.mysql
     pkgs.openssh
-    pkgs.python311Packages.flask
+    pkgs.mysql
   ];
   
   services = {
