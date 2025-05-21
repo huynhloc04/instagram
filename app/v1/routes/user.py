@@ -227,3 +227,29 @@ def get_following(user_id: int, current_user: User):
         return api_response(
             data=followers.dict(), message="Get followings users successfully.", status=200
         )
+
+
+@userRoute.route("/search", methods=["GET"])
+@token_required
+def search_user(current_user: User):
+    username = request.args.get('username', '', type=str)
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    with db_session() as session:
+        users = User.query.filter(User.username.like(f"%{username}%")).paginate(
+            page=page, per_page=per_page
+        )
+        results = UserReadList(
+            users=[
+                UserRead.from_orm(user) for user in users
+            ],
+            pagination=Pagination(
+                total=users.total,
+                page=users.page,
+                per_page=users.per_page,
+                pages=users.pages,
+            )
+        )
+        return api_response(
+            data=results.dict(), message="Search user successfully.", status=200
+        )
