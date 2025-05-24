@@ -1,20 +1,17 @@
+import os
 from pathlib import Path
 
 from flask import jsonify
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 from functools import wraps
+from google.cloud import storage
 from werkzeug.exceptions import NotFound, Unauthorized, BadRequest
 
 from app.v1.models import User
+from app.core.config import settings
 
 
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
-
-
-def find_file(filename: str, start_dir: Path = Path.cwd()) -> Path | None:
-    for path in start_dir.rglob(filename):
-        return path.resolve()
-    return None
 
 
 def api_response(data=None, message=None, status=200):
@@ -59,3 +56,20 @@ def validate_upload_file(request):
     if not file or not allowed_file(file.filename):
         raise BadRequest("Invalid file type")
     return file
+
+
+def find_file(filename: str, start_dir: Path = Path.cwd()) -> Path | None:
+    for path in start_dir.rglob(filename):
+        return path.resolve()
+    return None or ""
+
+
+def get_gcs_client():
+    filepath = find_file(filename=settings.GCS_KEY)
+    if os.path.isfile(filepath):
+        print(">> Getting from file...")
+        client = storage.Client.from_service_account_json(filepath)
+    else:
+        print(">> Getting from GCP...")
+        client = storage.Client()
+    return client
