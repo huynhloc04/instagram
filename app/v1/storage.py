@@ -3,16 +3,15 @@
 import os
 import uuid
 
-from google.cloud import storage
 from flask import current_app
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import NotFound, InternalServerError
 
 from app.core.config import settings
-from app.v1.utils import find_file
+from app.v1.utils import get_gcs_client
 
 
-client = storage.Client.from_service_account_json(find_file(filename=settings.GCS_KEY))
+client = get_gcs_client()
 bucket = client.bucket(settings.BUCKET_NAME)
 
 

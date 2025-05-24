@@ -11,4 +11,4 @@ gcs_key.json
 app/static/
 
 docker-compose.yml
-gcs_key.json
+gcs.json
