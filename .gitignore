@@ -9,3 +9,6 @@ gcs_key.json
 
 .idx/.data/
 app/static/
+
+docker-compose.yml
+gcs_key.json

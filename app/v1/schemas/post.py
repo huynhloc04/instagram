@@ -13,7 +13,7 @@ class PostCreate(BaseModel):
     caption: str
     image_name: str
     user_id: int
-    status: str = PostStatus.PUBLIC.value
+    status: str = PostStatus.public.value
 
 
 class PostRead(BaseModel):

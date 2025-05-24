@@ -1,4 +1,4 @@
-from sqlalchemy import Enum
+from werkzeug.exceptions import NotFound
 
 from app.core.extensions import db
 from app.v1.models.base import BaseModel, TimeMixin
@@ -16,9 +16,9 @@ class Post(BaseModel):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     deleted = db.Column(db.Boolean, default=False, nullable=False)
     status = db.Column(
-        Enum(PostStatus, name='post_status'), 
+        db.String(20), 
         nullable=False,
-        default=PostStatus.DRAFT
+        default=PostStatus.draft.value
     )
 
     def __repr__(self):
@@ -33,14 +33,14 @@ class Post(BaseModel):
             "modified_at": self.modified_at,
             "caption": self.caption,
             "image_name": self.image_name,
-            "status": self.status.value,
+            "status": self.status,
             "deleted": self.deleted,
         }
         if include_user:
             user = User.query.get(self.user_id)
             if not user:
                 raise NotFound(f"User with id {self.user_id} not found")
-            post_dict["user"] = UserRead.from_orm(user).dict()
+            post_dict["user"] = user.to_dict()
         if include_like:
             post_dict["like_count"] =  Like.query.filter_by(post_id=self.id).count()
             post_dict["liked_by_me"] =  Like.query.filter_by(

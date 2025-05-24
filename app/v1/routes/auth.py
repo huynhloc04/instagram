@@ -75,6 +75,7 @@ def login():
     return api_response(
         message='Login successfully.',
         data=login_user.dict(),
+        status=200,
     )
 
 

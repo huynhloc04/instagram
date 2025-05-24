@@ -3,7 +3,7 @@ name = "python-flask"
 version = "0.1.0"
 description = "Start a simple web app with the Flask framework for Python"
 authors = ["Google LLC"]
-packages = [{include = "src"}]
+packages = [{include = "app"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -18,9 +18,12 @@ pydantic = {extras = ["email"], version = "^2.11.4"}
 pydantic-settings = "^2.9.1"
 flask-migrate = "^4.1.0"
 google-cloud-storage = "^3.1.0"
+waitress = "^3.0.2"
+gunicorn = "^23.0.0"
+requests = "^2.32.3"
 
 [tool.poetry.scripts]
-app = 'src.main:main'
+app = 'app.main:main'
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,6 +1,6 @@
 #   Reference: https://medium.com/@dmostoller/mastering-error-handling-in-flask-with-werkzeug-exceptions-ensuring-robust-server-side-validations-a00a9862566a
 
-from flask import Flask, jsonify, current_app
+from flask import Flask, current_app
 from werkzeug.exceptions import (
     Conflict, 
     Unauthorized, 

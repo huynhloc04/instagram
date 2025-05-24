@@ -17,7 +17,7 @@ def handle_upload_image(image) -> str:
     try:
         #   TODO: Upload to Cloud service instead
         image.save(
-            os.path.join(settings.UPLOAD_FOLDER, unique_filename)
+            os.path.join("static/uploads", unique_filename)
         )
         current_app.logger.info("Image uploaded successfully.")
         return unique_filename

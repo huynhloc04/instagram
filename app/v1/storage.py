@@ -9,9 +9,10 @@ from werkzeug.utils import secure_filename
 from werkzeug.exceptions import NotFound, InternalServerError
 
 from app.core.config import settings
+from app.v1.utils import find_file
 
 
-client = storage.Client()
+client = storage.Client.from_service_account_json(find_file(filename=settings.GCS_KEY))
 bucket = client.bucket(settings.BUCKET_NAME)
 
 
@@ -39,7 +40,6 @@ def gcs_delete(filename: str) -> None:
             raise NotFound("File not found!")
 
         blob.delete()
-        current_app.logger.debug('Blob {} deleted.'.format(blob_name))
         return True
-    except:
+    except Exception as error:
         raise InternalServerError(f"Error deleting image: {error}.")

@@ -1,5 +1,5 @@
 from flask import Blueprint, current_app, request
-from werkzeug.exceptions import BadRequest, NotFound, Conflict
+from werkzeug.exceptions import BadRequest, NotFound, Conflict, InternalServerError
 
 from app.core.database import db_session 
 from app.v1.utils import api_response, token_required
@@ -18,10 +18,16 @@ userRoute = Blueprint('users', __name__, url_prefix='/users')
 @token_required
 def view_profile(current_user: User):
     current_app.logger.info("View profile endpoint called!")
-    user_profile = current_user.to_dict(
-        viewer=current_user, excludes=["is_following"]
+    try:
+        user_profile = current_user.to_dict(
+            viewer=current_user, excludes=["is_following"]
+        )
+    except ValueError as error:
+        raise InternalServerError(f"Error while fetching user {current_user.id} profile.")
+    current_app.logger.info(f"Get profile of user {current_user.id} successfully.")
+    return api_response(
+        data=user_profile, message="Get user profile successfully.", status=200
     )
-    return api_response(data=user_profile, status=200)
 
 
 @userRoute.route('/profile', methods=['PUT'])

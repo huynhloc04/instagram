@@ -1,11 +1,9 @@
 import os
 
-from flask import Flask, Blueprint, send_file
+from flask import Flask, Blueprint
 from dotenv import load_dotenv
-from flasgger import Swagger
 from werkzeug.exceptions import NotFound
-from flask_jwt_extended import JWTManager
-from flask_sqlalchemy import SQLAlchemy
+from app.v1.utils import api_response
 
 from app.core.config import settings
 from app.core.handlers import register_error_handlers
@@ -15,11 +13,16 @@ from app.v1.routes.user import userRoute
 from app.v1.routes.post import postRoute
 from app.logs.config import setup_logging
 from app.v1.storage import bucket
-from flask import redirect
 
 load_dotenv()
 
 rootRoute = Blueprint("root", __name__,  url_prefix='/api/v1')
+
+
+@rootRoute.route("/", methods=["GET"])
+def init_app():
+    return api_response(message="Start Instagram web app with the Flask framework.")
+
 
 @rootRoute.route("/<string:image_name>", methods=['GET'])
 def serve_image(image_name: str):
@@ -27,7 +30,7 @@ def serve_image(image_name: str):
         gcs_filename = os.path.join(settings.POST_BUCKET_FOLDER, image_name)
         blob = bucket.blob(gcs_filename)
         if not blob.exists():
-            abort(404, description="File not found.")
+            NotFound(404, description="File not found.")
 
         return blob.public_url
     except Exception as error:

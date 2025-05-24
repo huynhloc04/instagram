@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 from flask import jsonify
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
@@ -9,7 +9,12 @@ from app.v1.models import User
 
 
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
-UPLOAD_FOLDER = 'uploads'
+
+
+def find_file(filename: str, start_dir: Path = Path.cwd()) -> Path | None:
+    for path in start_dir.rglob(filename):
+        return path.resolve()
+    return None
 
 
 def api_response(data=None, message=None, status=200):
@@ -22,6 +27,7 @@ def api_response(data=None, message=None, status=200):
     if data is not None:
         response['data'] = data
     return jsonify(response), status
+
 
 def token_required(func):
     """Create decorator for API authentication using JWT"""
@@ -39,8 +45,10 @@ def token_required(func):
         return func(current_user=current_user, *args, **kwargs)
     return wrapper	
 
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 def validate_upload_file(request):
     if 'file' not in request.files:

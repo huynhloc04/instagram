@@ -1,6 +1,5 @@
 from app.core.extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
 
 from app.v1.models.base import BaseModel
 from app.v1.models.follow import Follow

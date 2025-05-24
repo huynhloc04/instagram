@@ -43,7 +43,7 @@ def get_post(post_id: int, current_user: User):
         )
 
     
-@postRoute.route("/newsfeed", methods=["GET"])
+@postRoute.route("/news-feed", methods=["GET"])
 @token_required
 def view_news_feed(current_user: User):
     current_app.logger.info("News feed endpoint called.")
@@ -53,7 +53,7 @@ def view_news_feed(current_user: User):
     per_page = request.args.get('per_page', 10, type=int)
 
     with db_session() as session:
-        posts = Post.query.filter_by(status=PostStatus.PUBLIC, deleted=False) \
+        posts = Post.query.filter_by(status=PostStatus.public.value, deleted=False) \
             .order_by(Post.created_at.desc())   \
             .paginate(page=page, per_page=per_page)
             
@@ -107,7 +107,7 @@ def create_draft_post(current_user: User):
                 caption=caption,
                 image_name=image_name,
                 user_id=current_user.id,
-                status=PostStatus.DRAFT,
+                status=PostStatus.draft.value,
             )
         except ValidationError as exec:
             raise BadRequest(str(exec.error()))
@@ -173,7 +173,7 @@ def update_post_public(post_id: int, current_user: User):
             raise NotFound("Post not found!")
         if existing_post.user_id != current_user.id:
             raise Forbidden("You are not authorized to update this post!")
-        if existing_post.status == PostStatus.PUBLIC:
+        if existing_post.status == PostStatus.public.value:
             raise BadRequest("Post already published")
             
         #   1. Validate also prepare data

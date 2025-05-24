@@ -2,7 +2,6 @@ import os
 
 from app.v1 import create_app
 
-# Initialize Flask app and secret key for JWT
 app = create_app()
 
 if __name__ == "__main__":
