@@ -1,8 +1,26 @@
 import os
+import time
 import logging
 from logging.handlers import RotatingFileHandler
 
-def setup_logging(app):
+from flask import request
+from prometheus_client import Counter, Gauge, Histogram, Summary
+
+
+REQUEST_COUNT = Counter(
+    'sydegram_http_requests_total',
+    'Total number of HTTP requests',
+    ['method', 'endpoint', 'status_code']
+)
+
+REQUEST_LATENCY = Histogram(
+    'sydegram_http_request_duration_seconds',
+    'HTTP Request latency',
+    ['method', 'endpoint']
+)
+
+
+def init_logging(app):
     log_dir = "app/logs"
     os.makedirs(log_dir, exist_ok=True)
 
@@ -28,3 +46,15 @@ def setup_logging(app):
     #   Set level for app handler
     app.logger.setLevel(logging.DEBUG)
 
+
+def setup_prometheus(app):
+    @app.before_request
+    def start_timer():
+        request.start_time = time.time()
+
+    @app.after_request
+    def record_metrics(response):
+        latency = time.time() - request.start_time
+        REQUEST_COUNT.labels(request.method, request.path, response.status_code).inc()
+        REQUEST_LATENCY.labels(request.method, request.path).observe(latency)
+        return response

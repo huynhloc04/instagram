@@ -1,17 +1,19 @@
 import os
 
 from flask import Flask, Blueprint
+from prometheus_client import make_wsgi_app, REGISTRY
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from dotenv import load_dotenv
 from werkzeug.exceptions import NotFound
-from app.v1.utils import api_response
 
+from app.v1.utils import api_response
 from app.core.config import settings
 from app.core.handlers import register_error_handlers
 from app.core.extensions import register_extensions
 from app.v1.routes.auth import authRoute
 from app.v1.routes.user import userRoute
 from app.v1.routes.post import postRoute
-from app.logs.config import setup_logging
+from app.logs.config import init_logging, setup_prometheus
 from app.v1.storage import bucket
 
 load_dotenv()
@@ -20,7 +22,7 @@ rootRoute = Blueprint("root", __name__,  url_prefix='/api/v1')
 
 
 @rootRoute.route("/", methods=["GET"])
-def init_app():
+def index():
     return api_response(message="Start Instagram web app with the Flask framework.")
 
 
@@ -58,6 +60,10 @@ def create_app():
     register_error_handlers(app)
 
     #   Setup logging
-    setup_logging(app)
+    init_logging(app)
+    setup_prometheus(app)
+    app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {
+        '/metrics': make_wsgi_app(REGISTRY)
+    })
 
     return app

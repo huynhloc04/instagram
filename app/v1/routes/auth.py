@@ -1,10 +1,9 @@
 from datetime import timedelta
 
-from flask import Blueprint, request, jsonify, current_app
+from pydantic import ValidationError
+from flask import Blueprint, request, current_app
 from flask_jwt_extended import create_access_token, create_refresh_token
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
-from werkzeug.exceptions import InternalServerError
+from werkzeug.exceptions import BadRequest
 
 from app.core.database import db_session 
 from app.core.config import settings
@@ -18,7 +17,6 @@ authRoute = Blueprint('auth', __name__, url_prefix='/auth')
 
 @authRoute.route('/register', methods=['POST'])
 def register():
-    current_app.logger.info("Register endpoint called")
 
     with db_session() as session:
         # 1. Serialize and validate input JSON with Pydantic
@@ -26,7 +24,7 @@ def register():
         if not json_data:
             raise BadRequest("Please provide data to update.")
         try:
-            parsed_data = UserCreate.parse_obj(json_data)
+            parsed_data = UserCreate.model_validate(json_data)
         except ValidationError as exec:
             raise BadRequest(str(exec.error()))
         
@@ -37,10 +35,10 @@ def register():
         session.commit()
         
         #   3. Deserialize User DB model to JSON response, convert from ORM-object to Pydantic object
-        registerd_user = UserRead.from_orm(created_user)
+        registerd_user = UserRead.model_validate(created_user)
         current_app.logger.info(f"User registered with username: {created_user.username} successfully.")
         return api_response(    
-            data=registerd_user.dict(),   #   Also can be used as registerd_user.json()
+            data=registerd_user.model_dump(),   #   Also can be used as registerd_user.json()
             message='User registered successfully.', 
             status=201,
         )
@@ -48,7 +46,7 @@ def register():
 
 @authRoute.route('/login', methods=['POST'])
 def login():
-    current_app.logger.info("Login endpoint called")
+
     json_data = request.get_json()
     if not json_data:
         raise BadRequest("Please provide data to update.")
@@ -69,19 +67,18 @@ def login():
     login_user = UserLoginResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        user=UserRead.from_orm(user)
+        user=UserRead.model_validate(user)
     )
     current_app.logger.info(f"User {username} login successfully.")
     return api_response(
         message='Login successfully.',
-        data=login_user.dict(),
+        data=login_user.model_dump(),
         status=200,
     )
 
 
 @authRoute.route('/logout', methods=['POST'])
 def logout():
-    current_app.logger.info("Logout successfully.")
     # Since JWTs are stateless, we don't need to do anything here.
     # The client should simply discard the JWT token.
     return api_response(message='Logout successfully.')

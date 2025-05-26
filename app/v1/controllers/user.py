@@ -1,12 +1,12 @@
 from sqlalchemy.orm import Session
-from werkzeug.exceptions import Conflict, Unauthorized
+from werkzeug.exceptions import Conflict
 
 from app.v1.schemas.user import UserCreate, UserEdit
 from app.v1.models.user import User
 
 
 def create_user(data: UserCreate, session: Session) -> User:
-    user = User(**data.dict(exclude={"password"}))
+    user = User(**data.model_dump(exclude={"password"}))
     user.set_password(data.password)
     session.add(user)
     session.flush()
