@@ -45,7 +45,7 @@ class PostRead(BaseModel):
     #         user = User.query.get(post.user_id)
     #         if not user:
     #             raise NotFound(f"User with id {post.user_id} not found")
-    #         post_dict["user"] = UserRead.from_orm(user)
+    #         post_dict["user"] = UserRead.model_validate(user)
     #     return cls(**post_dict)
 
 

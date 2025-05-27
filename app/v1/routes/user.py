@@ -1,4 +1,5 @@
 from flask import Blueprint, current_app, request
+from pydantic import ValidationError
 from werkzeug.exceptions import BadRequest, NotFound, Conflict, InternalServerError
 
 from app.core.database import db_session 
@@ -14,10 +15,9 @@ from app.v1.controllers.follow import create_follow_user
 userRoute = Blueprint('users', __name__, url_prefix='/users')
 
 
-@userRoute.route('/profile', methods=['GET'])
+@userRoute.route('/me', methods=['GET'])
 @token_required
 def view_profile(current_user: User):
-    current_app.logger.info("View profile endpoint called!")
     try:
         user_profile = current_user.to_dict(
             viewer=current_user, excludes=["is_following"]
@@ -33,14 +33,13 @@ def view_profile(current_user: User):
 @userRoute.route('/profile', methods=['PUT'])
 @token_required
 def edit_profile(current_user: User):
-    current_app.logger.info("Edit profile endpoint called!")
     
     with db_session() as session:
         json_data = request.get_json(force=True) or {}
         if not json_data:
             raise BadRequest("Please provide data to update.")
         try:
-            parsed_data = UserEdit.parse_obj(json_data)
+            parsed_data = UserEdit.model_validate(json_data)
         except ValidationError as exec:
             raise BadRequest(str(exec.error()))
 
@@ -54,9 +53,9 @@ def edit_profile(current_user: User):
         session.commit()
 
         current_app.logger.info(f"User {current_user.username} updated profile successfully.")
-        updated_profile = UserRead.from_orm(current_user)
+        updated_profile = UserRead.model_validate(current_user)
         return api_response(
-            data=updated_profile.dict(), 
+            data=updated_profile.model_dump(), 
             message="Profile updated successfully.",
             status=200,
         )
@@ -65,11 +64,10 @@ def edit_profile(current_user: User):
 @userRoute.route('/<int:user_id>/profile', methods=['GET'])
 @token_required
 def view_other_profile(user_id: int, current_user: User):
-    current_app.logger.info("View other profile endpoint called!")
     user = User.query.get(user_id)
     if not user:
         raise NotFound(f"User with id {user_id} not found.")
-    # response = UserRead.from_orm(user)
+    # response = UserRead.model_validate(user)
     # return api_response(data=response.dict(), status=200)
     user_profile = user.to_dict(viewer=current_user)
     return api_response(data=user_profile, status=200)
@@ -78,7 +76,6 @@ def view_other_profile(user_id: int, current_user: User):
 @userRoute.route("/<int:user_id>/posts", methods=['GET'])
 @token_required
 def get_list_post(user_id: int, current_user: User):
-    current_app.logger.info("Retieve all posts endpoint called.")
     with db_session() as session:
         # Get pagination parameters from query string
         page = request.args.get('page', 1, type=int)
@@ -100,7 +97,7 @@ def get_list_post(user_id: int, current_user: User):
         )
         current_app.logger.info(f"Retrieved all posts for user {current_user.id} successfully.")
         return api_response(
-            data=post_list.dict(),
+            data=post_list.model_dump(),
             message='Retrieved all posts successfully.',
             status=200,
         )
@@ -109,9 +106,8 @@ def get_list_post(user_id: int, current_user: User):
 @userRoute.route("/<int:user_id>/follow", methods=['POST'])
 @token_required
 def follow_user(user_id: int, current_user: User):
-    current_app.logger.info("Follow user endpoint called.")
-    with db_session() as session:
 
+    with db_session() as session:
         user = User.query.get(user_id)
         if not user:
             raise NotFound("Following user not found!")
@@ -135,9 +131,8 @@ def follow_user(user_id: int, current_user: User):
 @userRoute.route("/<int:user_id>/unfollow", methods=['DELETE'])
 @token_required
 def unfollow_user(user_id: int, current_user: User):
-    current_app.logger.info("Unfollow user endpoint called.")
-    with db_session() as session:
 
+    with db_session() as session:
         user = User.query.get(user_id)
         if not user:
             raise NotFound("The following user not found!")
@@ -159,7 +154,7 @@ def unfollow_user(user_id: int, current_user: User):
 @token_required
 def get_follower(user_id: int, current_user: User):
     """Get all users who follow the user {user_id} """
-    current_app.logger.info("Get follower endpoint called.")
+
     with db_session() as session:
 
         # Get pagination parameters from query string
@@ -180,7 +175,7 @@ def get_follower(user_id: int, current_user: User):
 
         followers = UserReadList(
             users=[
-                UserRead.from_orm(result) for result in results
+                UserRead.model_validate(result) for result in results
             ],
             pagination=Pagination(
                 page=results.page,
@@ -191,7 +186,7 @@ def get_follower(user_id: int, current_user: User):
         )
         current_app.logger.info(f"Retrieved all followers for user {user.id} successfully.")
         return api_response(
-            data=followers.dict(), message="Get follower users successfully.", status=200
+            data=followers.model_dump(), message="Get follower users successfully.", status=200
         )
 
 
@@ -199,9 +194,8 @@ def get_follower(user_id: int, current_user: User):
 @token_required
 def get_following(user_id: int, current_user: User):
     """Get all users who the user {user_id} followed """
-    current_app.logger.info("Get following endpoint called.")
-    with db_session() as session:
 
+    with db_session() as session:
         # Get pagination parameters from query string
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 10, type=int)
@@ -220,7 +214,7 @@ def get_following(user_id: int, current_user: User):
 
         followers = UserReadList(
             users=[
-                UserRead.from_orm(result) for result in results
+                UserRead.model_validate(result) for result in results
             ],
             pagination=Pagination(
                 page=results.page,
@@ -231,7 +225,7 @@ def get_following(user_id: int, current_user: User):
         )
         current_app.logger.info(f"Retrieved all followings for user {user.id} successfully.")
         return api_response(
-            data=followers.dict(), message="Get followings users successfully.", status=200
+            data=followers.model_dump(), message="Get followings users successfully.", status=200
         )
 
 
@@ -247,7 +241,7 @@ def search_user(current_user: User):
         )
         results = UserReadList(
             users=[
-                UserRead.from_orm(user) for user in users
+                UserRead.model_validate(user) for user in users
             ],
             pagination=Pagination(
                 total=users.total,
@@ -257,5 +251,5 @@ def search_user(current_user: User):
             )
         )
         return api_response(
-            data=results.dict(), message="Search user successfully.", status=200
+            data=results.model_dump(), message="Search user successfully.", status=200
         )

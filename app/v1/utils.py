@@ -67,9 +67,7 @@ def find_file(filename: str, start_dir: Path = Path.cwd()) -> Path | None:
 def get_gcs_client():
     filepath = find_file(filename=settings.GCS_KEY)
     if os.path.isfile(filepath):
-        print(">> Getting from file...")
         client = storage.Client.from_service_account_json(filepath)
     else:
-        print(">> Getting from GCP...")
         client = storage.Client()
     return client

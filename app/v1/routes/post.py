@@ -1,15 +1,11 @@
-import time
-import os
-
 from pydantic import ValidationError
 from flask import Blueprint, current_app, request
-from werkzeug.exceptions import BadRequest, NotFound, Conflict, Forbidden, InternalServerError
+from werkzeug.exceptions import BadRequest, NotFound, Conflict, Forbidden
 
 from app.core.database import db_session
-from app.core.config import settings
 from app.v1.models import Post, User, Like
 from app.v1.schemas.base import Pagination
-from app.v1.schemas.post import PostCreate, PostRead, PostEdit, PostReadList
+from app.v1.schemas.post import PostCreate, PostEdit, PostReadList
 from app.v1.controllers.post import create_post, update_post
 from app.v1.enums import PostStatus
 from app.v1.utils import (
@@ -26,7 +22,6 @@ postRoute = Blueprint('posts', __name__, url_prefix='/posts')
 @postRoute.route("/<int:post_id>", methods=['GET'])
 @token_required
 def get_post(post_id: int, current_user: User):
-    current_app.logger.info("Retieve post endpoint called.")
     with db_session() as session:
         post = Post.query.get(post_id)
         if not post:
@@ -36,7 +31,6 @@ def get_post(post_id: int, current_user: User):
         )
         current_app.logger.info(f"Post with id {post_id} retrieved successfully.")
         return api_response(
-            # data=PostRead(**parsed_post).dict(),
             data=parsed_post,
             message='Post retrieved successfully.',
             status=200,
@@ -46,7 +40,6 @@ def get_post(post_id: int, current_user: User):
 @postRoute.route("/news-feed", methods=["GET"])
 @token_required
 def view_news_feed(current_user: User):
-    current_app.logger.info("News feed endpoint called.")
 
     # Get pagination parameters from query string
     page = request.args.get('page', 1, type=int)
@@ -73,14 +66,13 @@ def view_news_feed(current_user: User):
         )
         current_app.logger.info("View news feed successfully.")
         return api_response(
-            data=news_feed.dict(), message="View news feed successfully.", status=200
+            data=news_feed.model_dump(), message="View news feed successfully.", status=200
         )
 
 
 @postRoute.route("/upload", methods=['POST'])
 @token_required
 def upload_media(current_user: User):
-    current_app.logger.info("Post upload media endpoint called.")
     #   1. Validate also prepare data
     uploaded_image = validate_upload_file(request=request)
     image_name = gcs_upload(file_obj=uploaded_image)
@@ -94,7 +86,6 @@ def upload_media(current_user: User):
 @postRoute.route("/draft", methods=['POST'])
 @token_required
 def create_draft_post(current_user: User):
-    current_app.logger.info("Create draft post endpoint called.")
 
     with db_session() as session:
         #   1. Validate also prepare data
@@ -130,7 +121,6 @@ def create_draft_post(current_user: User):
 @postRoute.route("/", methods=['POST'])
 @token_required
 def create_post_public(current_user: User):
-    current_app.logger.info("Create post endpoint called.")
 
     with db_session() as session:
         image_name = request.form.get("image_name")
@@ -164,7 +154,6 @@ def create_post_public(current_user: User):
 @postRoute.route("/<int:post_id>", methods=['PUT'])
 @token_required
 def update_post_public(post_id: int, current_user: User):
-    current_app.logger.info("Update post endpoint called.")
 
     with db_session() as session:
         existing_post = Post.query.get(post_id)
@@ -193,7 +182,7 @@ def update_post_public(post_id: int, current_user: User):
             raise BadRequest(str(exc.error))
 
         #   3. Update instagram post
-        updated_post = update_post(post=existing_post, data=data_to_edit_post, session=session)
+        updated_post = update_post(post=existing_post, data=data_to_edit_post)
         session.commit()
 
         #   4. Deserialize User DB model to JSON response, convert from ORM-object to Pydantic object
@@ -209,7 +198,6 @@ def update_post_public(post_id: int, current_user: User):
 @postRoute.route("/<int:post_id>", methods=["DELETE"])
 @token_required
 def delete_post(post_id: int, current_user: User):
-    current_app.logger.info("Delete post endpoint called.")
 
     with db_session() as session:
         existing_post = Post.query.get(post_id)
@@ -230,7 +218,6 @@ def delete_post(post_id: int, current_user: User):
 @postRoute.route("/<int:post_id>/likes", methods=["POST"])
 @token_required
 def like_post(post_id: int, current_user: User):
-    current_app.logger.info("Like post endpoint called.")
     
     with db_session() as session:
         post = Post.query.get(post_id)
@@ -250,8 +237,6 @@ def like_post(post_id: int, current_user: User):
 @postRoute.route("/<int:post_id>/unlikes", methods=["POST"])
 @token_required
 def unlike_post(post_id: int, current_user: User):
-    current_app.logger.info("Unlike post endpoint called.")
-    
     with db_session() as session:
         post = Post.query.get(post_id)
         if not post:

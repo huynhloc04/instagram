@@ -1,12 +1,11 @@
-from werkzeug.exceptions import BadRequest, NotFound, Conflict
 from sqlalchemy.orm import Session
 
-from app.v1.models import User, Follow
+from app.v1.models import Follow
 from app.v1.schemas.follow import FollowUser
 
 
 def create_follow_user(data: FollowUser, session: Session) -> None:
-    follow = Follow(**data.dict())
+    follow = Follow(**data.model_dump())
     session.add(follow)
     session.flush()
 

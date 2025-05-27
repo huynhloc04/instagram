@@ -1,6 +1,5 @@
 from werkzeug.exceptions import Conflict, Unauthorized
 
-from sqlalchemy.orm import Session
 from app.v1.schemas.user import UserCreate
 from app.v1.models.user import User
 
