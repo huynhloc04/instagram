@@ -8,3 +8,16 @@ Server should run automatically when starting a workspace. To run manually, run:
 ```sh
 ./devserver.sh
 ```
+
+### Flask Database Migration
+
+```bash
+1, Init migration
+    >> python -m flask --app app/main db init
+
+2, Start migrating
+    >> python -m flask --app app/main db migrate -m "message"
+
+3, Upgrade
+    >> python -m flask --app app/main db upgrade
+```

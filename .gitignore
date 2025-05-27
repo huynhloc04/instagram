@@ -2,3 +2,13 @@ __pycache__
 
 .venv
 .env
+
+*.log
+*.txt
+gcs_key.json
+
+.idx/.data/
+app/static/
+
+docker-compose.yml
+gcs.json
