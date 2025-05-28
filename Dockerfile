@@ -21,7 +21,7 @@ WORKDIR /instagram
 
 COPY pyproject.toml poetry.lock ./
 
-RUN --mount=type=cache,target=${POETRY_CACHE_DIR} poetry install --without dev --no-root
+RUN poetry install --without dev --no-root && rm -rf ${POETRY_CACHE_DIR}
 
 
 # ---------- Runtime Stage ----------
