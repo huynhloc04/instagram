@@ -1,14 +1,15 @@
-import os
+import os, time
 from pathlib import Path
 
-from flask import jsonify
-from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from flask import jsonify, request
 from functools import wraps
 from google.cloud import storage
+from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 from werkzeug.exceptions import NotFound, Unauthorized, BadRequest
 
 from app.v1.models import User
 from app.core.config import settings
+from app.logs.config import REQUEST_COUNT, REQUEST_LATENCY
 
 
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
@@ -71,3 +72,18 @@ def get_gcs_client():
     else:
         client = storage.Client()
     return client
+
+
+def register_dependencies(app):
+
+    @app.before_request
+    def start_timer():
+        request.start_time = time.time()
+
+    @app.after_request
+    def record_metrics(response):
+        latency = time.time() - request.start_time
+        REQUEST_COUNT.labels(request.method, request.path, response.status_code).inc()
+        REQUEST_LATENCY.labels(request.method, request.path).observe(latency)
+        return response
+

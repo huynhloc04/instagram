@@ -36,7 +36,7 @@ def gcs_delete(filename: str) -> None:
     try:
         blob = bucket.blob(filename)
         if not blob.exists():
-            raise NotFound("File not found!")
+            raise NotFound(f"File {filename} not found!")
 
         blob.delete()
         return True

@@ -1,18 +1,18 @@
+from sqlalchemy import func
 from werkzeug.exceptions import NotFound
 
 from app.core.extensions import db
 from app.v1.models.base import BaseModel, TimeMixin
 from app.v1.enums import PostStatus
 from app.v1.models.user import User
-from app.v1.schemas.user import UserRead
 from app.v1.models.like import Like
+from app.core.database import db_session
 
 
 class Post(BaseModel):
     __tablename__ = 'posts'
     
     caption = db.Column(db.Text, nullable=True)
-    image_name = db.Column(db.String(255), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     deleted = db.Column(db.Boolean, default=False, nullable=False)
     status = db.Column(
@@ -25,27 +25,42 @@ class Post(BaseModel):
         return f"{self.caption}"
 
     def to_dict(
-        self, current_user: User = None, include_user: bool = False, include_like: bool = False
+        self, 
+        current_user: User = None, 
+        include_user: bool = False, 
+        include_like: bool = False,
     ) -> dict:
         post_dict = {
             "id": self.id,
             "created_at": self.created_at,
             "modified_at": self.modified_at,
             "caption": self.caption,
-            "image_name": self.image_name,
             "status": self.status,
             "deleted": self.deleted,
         }
-        if include_user:
-            user = User.query.get(self.user_id)
-            if not user:
-                raise NotFound(f"User with id {self.user_id} not found")
-            post_dict["user"] = user.to_dict()
-        if include_like:
-            post_dict["like_count"] =  Like.query.filter_by(post_id=self.id).count()
-            post_dict["liked_by_me"] =  Like.query.filter_by(
-                post_id=self.id, user_id=current_user.id
-            ).first() is not None if current_user else False
+        with db_session() as session:
+            image = session.query(ImageCron)    \
+                .join(Post, ImageCron.post_id==self.id) \
+                .filter(Post.id==self.id).first()
+            if not image:
+                raise NotFound(f"Cannot find image for post {self.id}")
+            post_dict["image_name"] = image.image_name
+            if include_user:
+                user = session.query(User).where(User.id==self.user_id).first()
+                if not user:
+                    raise NotFound(f"User with id {self.user_id} not found")
+                post_dict["user"] = user.to_dict()
+            if include_like:
+                like_count = session.query(Like).filter_by(post_id=self.id).count()
+                liked_by_me = False
+                if current_user:
+                    liked_by_me = session.query(Like).filter_by(
+                        post_id=self.id,
+                        user_id=current_user.id
+                    ).first() is not None
+                post_dict["like_count"] = like_count
+                post_dict["liked_by_me"] = liked_by_me
+
         return post_dict
 
 
@@ -63,4 +78,14 @@ class PostTag(TimeMixin):
         db.ForeignKey('tags.id'), 
         nullable=False, 
         primary_key=True
+    )
+
+
+class ImageCron(BaseModel):
+
+    __table_name__ = "image_crons"
+    image_name = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="unused")
+    post_id = db.Column(
+        db.Integer, db.ForeignKey('posts.id'), nullable=True
     )

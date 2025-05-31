@@ -232,11 +232,11 @@ def get_following(user_id: int, current_user: User):
 @userRoute.route("/search", methods=["GET"])
 @token_required
 def search_user(current_user: User):
-    username = request.args.get('username', '', type=str)
+    search_query = request.args.get('search', '', type=str)
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
     with db_session() as session:
-        users = User.query.filter(User.username.like(f"%{username}%")).paginate(
+        users = User.query.filter(User.username.like(f"%{search_query}%")).paginate(
             page=page, per_page=per_page
         )
         results = UserReadList(
