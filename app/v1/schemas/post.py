@@ -11,7 +11,6 @@ from app.v1.enums import PostStatus
 
 class PostCreate(BaseModel):
     caption: str
-    image_name: str
     user_id: int
     status: str = PostStatus.public.value
 
