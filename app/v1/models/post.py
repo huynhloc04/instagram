@@ -1,4 +1,3 @@
-from sqlalchemy import func
 from werkzeug.exceptions import NotFound
 
 from app.core.extensions import db
@@ -7,6 +6,7 @@ from app.v1.enums import PostStatus
 from app.v1.models.user import User
 from app.v1.models.like import Like
 from app.core.database import db_session
+from app.v1.controllers.comment import get_base_comment_and_count
 
 
 class Post(BaseModel):
@@ -28,7 +28,8 @@ class Post(BaseModel):
         self, 
         current_user: User = None, 
         include_user: bool = False, 
-        include_like: bool = False,
+        include_like: bool = False, 
+        include_comment: bool = False
     ) -> dict:
         post_dict = {
             "id": self.id,
@@ -60,7 +61,10 @@ class Post(BaseModel):
                     ).first() is not None
                 post_dict["like_count"] = like_count
                 post_dict["liked_by_me"] = liked_by_me
-
+            if include_comment:
+                post_dict["comments"] = get_base_comment_and_count(
+                    post_id=self.id, session=session
+                )
         return post_dict
 
 
@@ -89,3 +93,5 @@ class ImageCron(BaseModel):
     post_id = db.Column(
         db.Integer, db.ForeignKey('posts.id'), nullable=True
     )
+
+
