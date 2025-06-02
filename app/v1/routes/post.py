@@ -1,13 +1,12 @@
-import re
-
 from pydantic import ValidationError
 from flask import Blueprint, current_app, request
 from werkzeug.exceptions import BadRequest, NotFound, Conflict, Forbidden
 
 from app.core.database import db_session
-from app.v1.models import Post, User, Like, ImageCron
+from app.v1.models import Post, User, Like, ImageCron, Comment
 from app.v1.schemas.base import Pagination
 from app.v1.schemas.post import PostCreate, PostEdit, PostReadList
+from app.v1.schemas.comment import CommentReadList, CommentTree
 from app.v1.controllers.post import create_post, update_post
 from app.v1.controllers.tag import create_tags
 from app.v1.enums import PostStatus, ImageCronEnum
@@ -280,3 +279,96 @@ def unlike_post(post_id: int, current_user: User):
         session.commit()
         current_app.logger.info(f"User {current_user.id} unliked post {post_id} successfully.")
         return api_response(message="Unlike post successfully!")
+    
+
+@postRoute.route("/<int:post_id>/comments", methods=["POST"])
+@postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["POST"])
+@token_required
+def comment_on_post(
+    post_id: int, current_user: User, comment_id: int = None
+):
+    json_data = request.get_json()
+    if not json_data:
+        raise BadRequest("Please provide data to update.")
+    
+    content = json_data.get('content', '').strip()
+    if not content:
+        raise BadRequest("Comment content cannot be empty.")
+    if len(content) > 1000:
+        raise BadRequest("Comment is too long.")
+        
+    with db_session() as session:
+        post = session.query(Post).where(Post.id==post_id).first()
+        if not post:
+            raise NotFound(f"Post {post_id} not found!")
+        
+        comment_to_add = {
+            "post_id": post_id, 
+            "user_id": current_user.id, 
+            "content": content,
+        }
+        if comment_id:
+            comment_to_add["parent_comment_id"] = comment_id
+        comment = Comment(**comment_to_add)
+        session.add(comment)
+        session.commit()
+
+        current_app.logger.info(f"Comment on post {post_id} successfully.")
+        return api_response(message="Comment added successfully!")
+
+
+@postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["DELETE"])
+@token_required
+def delete_comment_from_post(post_id: int, comment_id: int, current_user: User):
+
+    with db_session() as session:
+        post = session.query(Post).where(Post.id==post_id).first()
+        if not post:
+            raise NotFound(f"Post {post_id} not found!")
+        if post.user_id != current_user.id:
+            raise Forbidden("You are not authorized to delete this comment!")
+        comment = session.query(Comment).where(Comment.id==comment_id).first()
+        if not comment:
+            raise NotFound(f"Comment {comment_id} not found!")
+        #   Delete comment
+        session.delete(comment)
+        session.commit()
+        current_app.logger.info(f"Delete comment {comment_id} successfully.")
+        return api_response(message="Delete comment successfully.")
+
+
+@postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["GET"])
+@token_required
+def list_child_comments(post_id: int, comment_id: int, current_user: User):
+
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+
+    with db_session() as session:
+        post = session.query(Post).where(Post.id==post_id).first()
+        if not post:
+            raise NotFound(f"Post {post_id} not found!")
+        
+        results = session.query(Comment)  \
+            .where(Comment.parent_comment_id==comment_id)    \
+            .order_by(Comment.created_at.desc())   \
+            .paginate(page=page, per_page=per_page)
+        if not results:
+            raise NotFound("Comments not found!")
+        
+        comments = CommentReadList(
+            comment_tree=[
+                CommentTree.model_validate(result)
+                for result in results
+            ],
+            pagination=Pagination(
+                total=results.total,
+                page=results.page,
+                per_page=results.per_page,
+                pages=results.pages,
+            ),
+        )
+        current_app.logger.info(f"View child comments of comment {comment_id} successfully.")
+        return api_response(
+            data=comments.model_dump(), message="View child comments successfully.", status=200
+        )
