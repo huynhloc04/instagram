@@ -24,10 +24,9 @@ class TestPostAPIs(TestCase):
         user = self.client.post(
             f"{self.api_prefix}/auth/login",
             content_type=self.content_type,
-            json=self.login_info
+            json=self.login_info,
         )
         self.assertEqual(user.json["status"], 200)
         self.assertIn("access_token", user.json["data"])
 
         #   2. Create post
-

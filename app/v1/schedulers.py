@@ -10,16 +10,19 @@ from app.core.database import db_session
 
 def scheduler_delete_image(app):
     """
-        Delete all unused image uploaded by users
-        - Delete in Database: ImageCron table.
-        - Delete on Google Cloud Storage.
+    Delete all unused image uploaded by users
+    - Delete in Database: ImageCron table.
+    - Delete on Google Cloud Storage.
     """
     with app.app_context():
 
         with db_session() as session:
-            image_names = session.query(ImageCron.image_name)  \
-                .filter(ImageCron.status==ImageCronEnum.unused.value).all()
-            
+            image_names = (
+                session.query(ImageCron.image_name)
+                .filter(ImageCron.status == ImageCronEnum.unused.value)
+                .all()
+            )
+
             # Get IDs or names of successfully deleted images
             deleted_image_names = []
 
@@ -31,7 +34,8 @@ def scheduler_delete_image(app):
 
             #   Delete in Database (Only delete images that have been successfully deleted on GCS)
             if deleted_image_names:
-                statement = delete(ImageCron)   \
-                    .where(ImageCron.image_name.in_(deleted_image_names))
+                statement = delete(ImageCron).where(
+                    ImageCron.image_name.in_(deleted_image_names)
+                )
                 session.execute(statement)
                 session.commit()

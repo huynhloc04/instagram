@@ -12,6 +12,7 @@ def create_user(data: UserCreate, session: Session) -> User:
     session.flush()
     return user
 
+
 def check_user_edit(data: UserEdit, current_user: User) -> None:
     #   Check username
     if data.username == current_user.username:
@@ -25,4 +26,3 @@ def check_user_edit(data: UserEdit, current_user: User) -> None:
     email = User.query.filter_by(email=data.email).first()
     if email:
         raise Conflict(f"Email {data.email} already exists. Choose another!")
-

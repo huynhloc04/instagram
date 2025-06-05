@@ -9,9 +9,10 @@ def create_follow_user(data: FollowUser, session: Session) -> None:
     session.add(follow)
     session.flush()
 
+
 def get_list_followers(user_id: int):
     """
-        SELECT * FROM users
-        JOIN follows ON follows.follower_id=users.id
-        WHERE follows.following_id=1
+    SELECT * FROM users
+    JOIN follows ON follows.follower_id=users.id
+    WHERE follows.following_id=1
     """

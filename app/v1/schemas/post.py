@@ -25,9 +25,7 @@ class PostRead(BaseModel):
     deleted: bool
     user: UserRead | None = None
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
     # @classmethod
     # def from_post(cls, post: Post, include_user: bool = False):

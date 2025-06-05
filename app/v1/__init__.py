@@ -22,7 +22,7 @@ from app.v1.schedulers import scheduler_delete_image
 load_dotenv()
 scheduler = BackgroundScheduler()
 
-rootRoute = Blueprint("root", __name__,  url_prefix='/api/v1')
+rootRoute = Blueprint("root", __name__, url_prefix="/api/v1")
 
 
 @rootRoute.route("/", methods=["GET"])
@@ -30,7 +30,7 @@ def index():
     return api_response(message="Start Instagram web app with the Flask framework.")
 
 
-@rootRoute.route("/<string:image_name>", methods=['GET'])
+@rootRoute.route("/<string:image_name>", methods=["GET"])
 def serve_image(image_name: str):
     try:
         gcs_filename = os.path.join(settings.POST_BUCKET_FOLDER, image_name)
@@ -67,14 +67,12 @@ def create_app():
     init_logging(app)
 
     register_dependencies(app)
-    app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {
-        '/metrics': make_wsgi_app(REGISTRY)
-    })
+    app.wsgi_app = DispatcherMiddleware(
+        app.wsgi_app, {"/metrics": make_wsgi_app(REGISTRY)}
+    )
 
     #   Register background schedulers
-    scheduler.add_job(
-        scheduler_delete_image, 'interval', days=1, kwargs={"app": app}
-    )
+    scheduler.add_job(scheduler_delete_image, "interval", days=1, kwargs={"app": app})
     scheduler.start()
 
     return app

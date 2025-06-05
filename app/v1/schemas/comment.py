@@ -14,9 +14,7 @@ class CommentTree(BaseModel):
     content: str
     parent_comment_id: int | None = None
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class CommentReadList(BaseModel):
