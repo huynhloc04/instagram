@@ -44,7 +44,7 @@ class UserRead(BaseModel):
 
     model_config = {
         "from_attributes": True
-    }   #   Accept input as ORM-object, not just from a dict
+    }  #   Accept input as ORM-object, not just from a dict
 
 
 class UserLoginResponse(BaseModel):

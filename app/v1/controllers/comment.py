@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 
 
 def get_base_comment_and_count(post_id: int, session: Session):
-    raw_sql = text("""
+    raw_sql = text(
+        """
         WITH child_cte AS (
             SELECT 
                 parent_comment_id,
@@ -27,7 +28,8 @@ def get_base_comment_and_count(post_id: int, session: Session):
             base.parent_comment_id IS NULL 
         AND
             base.post_id = :post_id;
-    """)
+    """
+    )
 
     result = session.execute(raw_sql, {"post_id": post_id})
     comments = result.fetchall()

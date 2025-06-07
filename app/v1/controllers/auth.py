@@ -14,6 +14,7 @@ def check_user_register(data: UserCreate) -> None:
     if email:
         raise Conflict(f"Email {data.email} already exists")
 
+
 def check_user_login(username: str, password: str) -> User:
     user = User.query.filter_by(username=username).first()
     if not user or not user.check_password(password):

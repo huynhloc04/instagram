@@ -10,10 +10,10 @@ from app.v1.models import Tag, PostTag, Post
 def extract_tags(caption: str) -> list[str]:
     """
     Extracts hashtags from a caption.
-    
+
     Args:
         caption (str): The text of the post caption.
-    
+
     Returns:
         List[str]: A list of extracted hashtags without the '#' symbol.
     """
@@ -21,14 +21,14 @@ def extract_tags(caption: str) -> list[str]:
         return []
 
     # Regular expression to match hashtags (e.g. #sunset, #hello_world)
-    return re.findall(r'#(\w+)', caption)
+    return re.findall(r"#(\w+)", caption)
 
 
 def create_tags(post: Post, session: Session):
     """
-        1. Extract tags from post's caption
-        2. Save tags to database
-        3. Attach tags to post
+    1. Extract tags from post's caption
+    2. Save tags to database
+    3. Attach tags to post
     """
     extracted_tags = extract_tags(caption=post.caption)
     #   Fetch all existing tags
@@ -38,10 +38,7 @@ def create_tags(post: Post, session: Session):
     new_tag_names = set(extracted_tags) - existing_tag_names
 
     try:
-        tags = [
-            Tag(tag_name=tag_name)
-            for tag_name in new_tag_names
-        ]
+        tags = [Tag(tag_name=tag_name) for tag_name in new_tag_names]
         session.add_all(tags)
         session.flush()
     except Exception as error:
@@ -49,12 +46,8 @@ def create_tags(post: Post, session: Session):
 
     try:
         tag_to_post = [*tags, *existing_tags]
-        post_tags = [
-            PostTag(tag_id=tag.id, post_id=post.id)
-            for tag in tag_to_post
-        ]
+        post_tags = [PostTag(tag_id=tag.id, post_id=post.id) for tag in tag_to_post]
         session.add_all(post_tags)
         session.flush()
     except Exception as error:
         raise ValueError(f"Attached tag to post {post.id} error: {error}")
-

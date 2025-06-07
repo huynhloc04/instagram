@@ -9,6 +9,7 @@ jwt = JWTManager()
 swagger = Swagger()
 migrate = Migrate()
 
+
 def register_extensions(app: Flask):
     jwt.init_app(app)
     db.init_app(app)

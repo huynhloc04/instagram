@@ -9,15 +9,15 @@ from prometheus_client import Counter, Gauge, Histogram, Summary
 #   ==================================================
 
 REQUEST_COUNT = Counter(
-    'sydegram_http_requests_total',
-    'Total number of HTTP requests',
-    ['method', 'endpoint', 'status_code']
+    "sydegram_http_requests_total",
+    "Total number of HTTP requests",
+    ["method", "endpoint", "status_code"],
 )
 
 REQUEST_LATENCY = Histogram(
-    'sydegram_http_request_duration_seconds',
-    'HTTP Request latency',
-    ['method', 'endpoint']
+    "sydegram_http_request_duration_seconds",
+    "HTTP Request latency",
+    ["method", "endpoint"],
 )
 
 
@@ -32,7 +32,9 @@ def init_logging(app):
     )
 
     # Create a rotating file handler (5MB per file, keep 5 files)
-    file_handler = RotatingFileHandler(log_file, maxBytes=5*1024*1024, backupCount=5)
+    file_handler = RotatingFileHandler(
+        log_file, maxBytes=5 * 1024 * 1024, backupCount=5
+    )
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.DEBUG)
 

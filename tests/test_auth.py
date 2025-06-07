@@ -19,7 +19,6 @@ class TestAuthApi(unittest.TestCase):
             "fullname": f"Dan Huynh {random_val}",
         }
 
-
     def tearDown(self):
         pass
 
@@ -38,23 +37,22 @@ class TestAuthApi(unittest.TestCase):
             content_type=self.content_type,
             json={
                 "username": self.user_info["username"],
-                "password": self.user_info["password"]
+                "password": self.user_info["password"],
             },
         )
         self.assertEqual(login_user.json["status"], 200)
         self.assertIn("access_token", login_user.json["data"])
 
         #   3. After login, get own profile
-        access_token = login_user.json['data']['access_token']
+        access_token = login_user.json["data"]["access_token"]
         profile = self.client.get(
             f"{self.api_prefix}/users/profile",
             content_type=self.content_type,
             headers={"Authorization": f"Bearer {access_token}"},
         )
         self.assertEqual(profile.json["status"], 200)
-        self.assertIn("username", profile.json['data'])
+        self.assertIn("username", profile.json["data"])
         self.assertEqual(profile.json["data"]["username"], self.user_info["username"])
-        
 
 
 if __name__ == "__main__":

@@ -12,23 +12,21 @@ from app.core.config import settings
 from app.logs.config import REQUEST_COUNT, REQUEST_LATENCY
 
 
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
 
 
 def api_response(data=None, message=None, status=200):
-    response = {
-        'success': 200 <= status < 300,
-        'status': status
-    }
+    response = {"success": 200 <= status < 300, "status": status}
     if message:
-        response['message'] = message
+        response["message"] = message
     if data is not None:
-        response['data'] = data
+        response["data"] = data
     return jsonify(response), status
 
 
 def token_required(func):
     """Create decorator for API authentication using JWT"""
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
@@ -41,18 +39,19 @@ def token_required(func):
             return NotFound(f"User {current_user.username} not found!")
 
         return func(current_user=current_user, *args, **kwargs)
-    return wrapper	
+
+    return wrapper
 
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def validate_upload_file(request):
-    if 'file' not in request.files:
+    if "file" not in request.files:
         raise BadRequest("No file part.")
     file = request.files.get("file")
-    if file.filename == '':
+    if file.filename == "":
         raise BadRequest("No selected file.")
     if not file or not allowed_file(file.filename):
         raise BadRequest("Invalid file type")
@@ -86,4 +85,3 @@ def register_dependencies(app):
         REQUEST_COUNT.labels(request.method, request.path, response.status_code).inc()
         REQUEST_LATENCY.labels(request.method, request.path).observe(latency)
         return response
-
