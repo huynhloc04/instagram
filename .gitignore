@@ -12,3 +12,5 @@ app/static/
 
 docker-compose.yml
 gcs.json
+
+deploy_copy.yml
