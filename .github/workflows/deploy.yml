@@ -61,6 +61,13 @@ jobs:
         needs: docker
 
         steps:
+          - name: Create SSH directory
+            run: mkdir -p ~/.ssh/
+            
+          - name: Add host key
+            run: |
+              ssh-keyscan -H ${{secrets.SERVER_HOST}} >> ~/.ssh/known_hosts
+              chmod 644 ~/.ssh/known_hosts
 
           - name: Deploy via SSH
             uses: appleboy/ssh-action@v1.2.0
@@ -111,6 +118,3 @@ jobs:
                 fi
                 
                 echo "Deployment completed successfully!"
-
-              
-
