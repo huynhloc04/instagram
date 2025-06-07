@@ -62,11 +62,17 @@ jobs:
 
         steps:
           - name: Create SSH directory
-            run: mkdir -p ~/.ssh/
+            run: |
+              mkdir -p ~/.ssh
+              chmod 700 ~/.ssh
             
           - name: Add host key
             run: |
-              ssh-keyscan -H ${{secrets.SERVER_HOST}} >> ~/.ssh/known_hosts
+              if ! ssh-keyscan -H "${{secrets.SERVER_HOST}}" >> ~/.ssh/known_hosts 2>/dev/null; then
+                echo "Failed to scan host key. Checking if host is reachable..."
+                ping -c 1 "${{secrets.SERVER_HOST}}" || echo "Host appears to be unreachable"
+                exit 1
+              fi
               chmod 644 ~/.ssh/known_hosts
 
           - name: Deploy via SSH
