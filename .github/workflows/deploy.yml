@@ -1,10 +1,10 @@
 name: Build and Deploy Flask app.
 
 on:
-    pull_request:
-        branches:
-          - develop
-          - main
+  pull_request:
+    branches:
+      - develop
+      - main
 
 jobs:
     build:
@@ -61,19 +61,6 @@ jobs:
         needs: docker
 
         steps:
-          - name: Create SSH directory
-            run: |
-              mkdir -p ~/.ssh
-              chmod 700 ~/.ssh
-            
-          - name: Add host key
-            run: |
-              if ! ssh-keyscan -H "${{secrets.SERVER_HOST}}" >> ~/.ssh/known_hosts 2>/dev/null; then
-                echo "Failed to scan host key. Checking if host is reachable..."
-                ping -c 1 "${{secrets.SERVER_HOST}}" || echo "Host appears to be unreachable"
-                exit 1
-              fi
-              chmod 644 ~/.ssh/known_hosts
 
           - name: Deploy via SSH
             uses: appleboy/ssh-action@v1.2.0
