@@ -1,6 +1,15 @@
-FROM python:3.11-slim
+#   References: https://medium.com/@albertazzir/blazing-fast-python-docker-builds-with-poetry-a78a66f5aed0
 
-RUN pip install poetry==1.4.2
+ARG PYTHON_VERSION=3.11-alpine  
+ARG VIRTUAL_ENV=/instagram/.venv
+
+# ---------- Build Stage ----------
+FROM python:${PYTHON_VERSION} AS builder
+
+# Install system dependencies required to build Python wheels
+RUN apk add --no-cache build-base libffi-dev openssl-dev
+
+RUN pip install --no-cache-dir poetry==1.4.2
 
 ENV POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \
@@ -12,12 +21,22 @@ WORKDIR /instagram
 
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry install --without dev --no-root && rm -rf $POETRY_CACHE_DIR
+RUN poetry install --without dev --no-root && rm -rf ${POETRY_CACHE_DIR}
+
+
+# ---------- Runtime Stage ----------
+FROM python:${PYTHON_VERSION} AS runtime
+
+WORKDIR /instagram
+
+ARG VIRTUAL_ENV
+
+ENV PATH="${VIRTUAL_ENV}/bin:$PATH"
+
+COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 
 COPY . .
 
-RUN poetry install --without dev
+EXPOSE 8000
 
-EXPOSE 5000
-
-CMD ["poetry", "run", "gunicorn", "--bind", "0.0.0.0:5000", "app.main:app"]
+ENTRYPOINT ["gunicorn", "--bind", "0.0.0.0:8000", "app.main:app"]

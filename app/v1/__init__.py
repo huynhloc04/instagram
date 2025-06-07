@@ -3,7 +3,9 @@ import os
 from flask import Flask, Blueprint
 from dotenv import load_dotenv
 from werkzeug.exceptions import NotFound
-from app.v1.utils import api_response
+from prometheus_client import make_wsgi_app, REGISTRY
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.core.config import settings
 from app.core.handlers import register_error_handlers
@@ -11,16 +13,20 @@ from app.core.extensions import register_extensions
 from app.v1.routes.auth import authRoute
 from app.v1.routes.user import userRoute
 from app.v1.routes.post import postRoute
-from app.logs.config import setup_logging
+from app.logs.config import init_logging
 from app.v1.storage import bucket
+from app.v1.utils import api_response, register_dependencies
+from app.v1.schedulers import scheduler_delete_image
+
 
 load_dotenv()
+scheduler = BackgroundScheduler()
 
 rootRoute = Blueprint("root", __name__,  url_prefix='/api/v1')
 
 
 @rootRoute.route("/", methods=["GET"])
-def init_app():
+def index():
     return api_response(message="Start Instagram web app with the Flask framework.")
 
 
@@ -58,6 +64,17 @@ def create_app():
     register_error_handlers(app)
 
     #   Setup logging
-    setup_logging(app)
+    init_logging(app)
+
+    register_dependencies(app)
+    app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {
+        '/metrics': make_wsgi_app(REGISTRY)
+    })
+
+    #   Register background schedulers
+    scheduler.add_job(
+        scheduler_delete_image, 'interval', days=1, kwargs={"app": app}
+    )
+    scheduler.start()
 
     return app
