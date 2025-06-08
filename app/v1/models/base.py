@@ -8,16 +8,16 @@ class TimeMixin(db.Model):
 
     created_at = db.Column(
         "created_at",
-        db.Integer, 
-        default=lambda: int(datetime.now().timestamp()), 
-        nullable=False
+        db.Integer,
+        default=lambda: int(datetime.now().timestamp()),
+        nullable=False,
     )
     modified_at = db.Column(
         "modified_at",
         db.Integer,
-        default=lambda: int(datetime.now().timestamp()), 
-        onupdate=lambda: int(datetime.now().timestamp()), 
-        nullable=False
+        default=lambda: int(datetime.now().timestamp()),
+        onupdate=lambda: int(datetime.now().timestamp()),
+        nullable=False,
     )
 
 

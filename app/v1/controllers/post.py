@@ -15,19 +15,19 @@ def handle_upload_image(image) -> str:
     unique_filename = f"{str(uuid.uuid4())}_{sanitized_filename}"
     try:
         #   TODO: Upload to Cloud service instead
-        image.save(
-            os.path.join("static/uploads", unique_filename)
-        )
+        image.save(os.path.join("static/uploads", unique_filename))
         current_app.logger.info("Image uploaded successfully.")
         return unique_filename
     except Exception as error:
         raise InternalServerError(f"Error saving image: {error}.")
+
 
 def create_post(data: PostCreate, session: Session) -> Post:
     post = Post(**data.model_dump())
     session.add(post)
     session.flush()
     return post
+
 
 def update_post(post: Post, data: PostEdit) -> None:
     for field_to_update, value in data.model_dump(

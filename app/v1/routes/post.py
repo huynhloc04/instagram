@@ -10,18 +10,19 @@ from app.v1.schemas.comment import CommentReadList, CommentTree
 from app.v1.controllers.post import create_post, update_post
 from app.v1.controllers.tag import create_tags
 from app.v1.enums import PostStatus, ImageCronEnum
+from app.v1.storage import gcs_upload
+from app.v1.controllers.comment import get_base_comment_and_count
 from app.v1.utils import (
-    api_response, 
-    token_required, 
+    api_response,
+    token_required,
     validate_upload_file,
 )
-from app.v1.storage import gcs_upload
 
 
-postRoute = Blueprint('posts', __name__, url_prefix='/posts')
+postRoute = Blueprint("posts", __name__, url_prefix="/posts")
 
 
-@postRoute.route("/<int:post_id>", methods=['GET'])
+@postRoute.route("/<int:post_id>", methods=["GET"])
 @token_required
 def get_post(post_id: int, current_user: User):
     with db_session() as session:
@@ -29,32 +30,34 @@ def get_post(post_id: int, current_user: User):
         if not post:
             raise NotFound("Post not found!")
         parsed_post = post.to_dict(
-            current_user=current_user, 
-            include_user=True, 
-            include_like=True, 
-            include_comment=True
+            current_user=current_user,
+            include_user=True,
+            include_like=True,
+            include_comment=True,
         )
         current_app.logger.info(f"Post with id {post_id} retrieved successfully.")
         return api_response(
             data=parsed_post,
-            message='Post retrieved successfully.',
+            message="Post retrieved successfully.",
             status=200,
         )
 
-    
+
 @postRoute.route("/news-feed", methods=["GET"])
 @token_required
 def view_news_feed(current_user: User):
 
     # Get pagination parameters from query string
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
 
     with db_session() as session:
-        posts = Post.query.filter_by(status=PostStatus.public.value, deleted=False) \
-            .order_by(Post.created_at.desc())   \
+        posts = (
+            Post.query.filter_by(status=PostStatus.public.value, deleted=False)
+            .order_by(Post.created_at.desc())
             .paginate(page=page, per_page=per_page)
-            
+        )
+
         news_feed = PostReadList(
             posts=[
                 post.to_dict(
@@ -71,11 +74,13 @@ def view_news_feed(current_user: User):
         )
         current_app.logger.info("View news feed successfully.")
         return api_response(
-            data=news_feed.model_dump(), message="View news feed successfully.", status=200
+            data=news_feed.model_dump(),
+            message="View news feed successfully.",
+            status=200,
         )
 
 
-@postRoute.route("/upload", methods=['POST'])
+@postRoute.route("/upload", methods=["POST"])
 @token_required
 def upload_media(current_user: User):
     #   1. Validate also prepare data
@@ -91,15 +96,15 @@ def upload_media(current_user: User):
         )
         session.add(image)
         session.commit()
-        
+
         return api_response(
-            message="Upload media successfully.", 
-            data={"image_id": image.id}, 
-            status=201
+            message="Upload media successfully.",
+            data={"image_id": image.id},
+            status=201,
         )
 
 
-@postRoute.route("/draft", methods=['POST'])
+@postRoute.route("/draft", methods=["POST"])
 @token_required
 def create_draft_post(current_user: User):
 
@@ -131,15 +136,17 @@ def create_draft_post(current_user: User):
 
         session.commit()
         current_app.logger.info("Draft post created successfully.")
-        
-        return api_response(    
-            data=draft_post.to_dict(include_user=True),   #   Also can be used as draft_post.json()
-            message='Draft post created successfully.', 
+
+        return api_response(
+            data=draft_post.to_dict(
+                include_user=True
+            ),  #   Also can be used as draft_post.json()
+            message="Draft post created successfully.",
             status=201,
         )
 
 
-@postRoute.route("/", methods=['POST'])
+@postRoute.route("/", methods=["POST"])
 @token_required
 def create_post_public(current_user: User):
 
@@ -166,18 +173,18 @@ def create_post_public(current_user: User):
 
         #   4. Create tag and attach tag to a post
         create_tags(post=created_post, session=session)
-        
+
         session.commit()
         current_app.logger.info("Post created successfully.")
-        
-        return api_response(    
+
+        return api_response(
             data=created_post.to_dict(include_user=True),
-            message='Post created successfully.', 
+            message="Post created successfully.",
             status=201,
         )
 
 
-@postRoute.route("/<int:post_id>", methods=['PUT'])
+@postRoute.route("/<int:post_id>", methods=["PUT"])
 @token_required
 def update_post_public(post_id: int, current_user: User):
 
@@ -190,7 +197,7 @@ def update_post_public(post_id: int, current_user: User):
             raise Forbidden("You are not authorized to update this post!")
         if existing_post.status == PostStatus.public.value:
             raise BadRequest("Post already published")
-            
+
         #   1. Validate also prepare data
         caption = request.form.get("caption")
         status = request.form.get("status")
@@ -218,9 +225,9 @@ def update_post_public(post_id: int, current_user: User):
 
         #   4. Deserialize User DB model to JSON response, convert from ORM-object to Pydantic object
         current_app.logger.info("Post updated successfully.")
-        return api_response(    
+        return api_response(
             data=updated_post.to_dict(include_user=True),
-            message='Post updated successfully.', 
+            message="Post updated successfully.",
             status=201,
         )
 
@@ -231,7 +238,7 @@ def delete_post(post_id: int, current_user: User):
 
     with db_session() as session:
         existing_post = session.get(Post, post_id)
-        if not existing_post or existing_post.deleted==True:
+        if not existing_post or existing_post.deleted == True:
             raise NotFound("Post not found!")
         if existing_post.user_id != current_user.id:
             raise Forbidden("You are not authorized to delete this post!")
@@ -240,7 +247,7 @@ def delete_post(post_id: int, current_user: User):
         existing_post.deleted = True
         session.commit()
         return api_response(
-            message='Post deleted successfully.',
+            message="Post deleted successfully.",
             status=200,
         )
 
@@ -248,7 +255,7 @@ def delete_post(post_id: int, current_user: User):
 @postRoute.route("/<int:post_id>/likes", methods=["POST"])
 @token_required
 def like_post(post_id: int, current_user: User):
-    
+
     with db_session() as session:
         post = Post.query.get(post_id)
         if not post:
@@ -260,7 +267,9 @@ def like_post(post_id: int, current_user: User):
         like = Like(user_id=current_user.id, post_id=post_id)
         session.add(like)
         session.commit()
-        current_app.logger.info(f"User {current_user.id} liked post {post_id} successfully.")
+        current_app.logger.info(
+            f"User {current_user.id} liked post {post_id} successfully."
+        )
         return api_response(message="Like post successfully!")
 
 
@@ -277,34 +286,96 @@ def unlike_post(post_id: int, current_user: User):
         #   Unlike a post
         session.delete(is_like)
         session.commit()
-        current_app.logger.info(f"User {current_user.id} unliked post {post_id} successfully.")
+        current_app.logger.info(
+            f"User {current_user.id} unliked post {post_id} successfully."
+        )
         return api_response(message="Unlike post successfully!")
-    
+
+
+@postRoute.route("/<int:post_id>/comments", methods=["GET"])
+@token_required
+def list_base_comments(post_id: int, current_user: User):
+
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
+
+    with db_session() as session:
+        post = session.query(Post).where(Post.id == post_id).first()
+        if not post:
+            raise NotFound(f"Post {post_id} not found!")
+
+        comments = get_base_comment_and_count(post_id=post_id, session=session)
+
+        current_app.logger.info(f"View all comments for post {post_id} successfully.")
+        return api_response(
+            data=comments, message="View comments successfully.", status=200
+        )
+
+
+@postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["GET"])
+@token_required
+def list_child_comments(post_id: int, comment_id: int, current_user: User):
+
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
+
+    with db_session() as session:
+        post = session.query(Post).where(Post.id == post_id).first()
+        if not post:
+            raise NotFound(f"Post {post_id} not found!")
+
+        results = (
+            session.query(Comment)
+            .where(
+                Comment.parent_comment_id == comment_id,
+                Comment.post_id == post_id,
+                Comment.parent_comment_id is not None,
+            )
+            .order_by(Comment.created_at.desc())
+            .paginate(page=page, per_page=per_page)
+        )
+        if not results:
+            raise NotFound("Comments not found!")
+
+        comments = CommentReadList(
+            comment_tree=[CommentTree.model_validate(result) for result in results],
+            pagination=Pagination(
+                total=results.total,
+                page=results.page,
+                per_page=results.per_page,
+                pages=results.pages,
+            ),
+        )
+        current_app.logger.info(
+            f"View child comments of comment {comment_id} successfully."
+        )
+        return api_response(
+            data=comments.model_dump(),
+            message="View child comments successfully.",
+            status=200,
+        )
+
 
 @postRoute.route("/<int:post_id>/comments", methods=["POST"])
 @postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["POST"])
 @token_required
-def comment_on_post(
-    post_id: int, current_user: User, comment_id: int = None
-):
+def comment_on_post(post_id: int, current_user: User, comment_id: int = None):
     json_data = request.get_json()
-    if not json_data:
-        raise BadRequest("Please provide data to update.")
-    
-    content = json_data.get('content', '').strip()
+
+    content = json_data.get("content").strip()
     if not content:
         raise BadRequest("Comment content cannot be empty.")
-    if len(content) > 1000:
+    if len(content) > 100:
         raise BadRequest("Comment is too long.")
-        
+
     with db_session() as session:
-        post = session.query(Post).where(Post.id==post_id).first()
+        post = session.query(Post).where(Post.id == post_id).first()
         if not post:
             raise NotFound(f"Post {post_id} not found!")
-        
+
         comment_to_add = {
-            "post_id": post_id, 
-            "user_id": current_user.id, 
+            "post_id": post_id,
+            "user_id": current_user.id,
             "content": content,
         }
         if comment_id:
@@ -317,17 +388,44 @@ def comment_on_post(
         return api_response(message="Comment added successfully!")
 
 
+@postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["PUT"])
+@token_required
+def update_comment(post_id: int, current_user: User, comment_id: int = None):
+
+    json_data = request.get_json()
+
+    content = json_data.get("content").strip()
+    if not content:
+        raise BadRequest("Comment content cannot be empty.")
+    if len(content) > 100:
+        raise BadRequest("Comment is too long.")
+
+    with db_session() as session:
+        post = session.query(Post).where(Post.id == post_id).first()
+        if not post:
+            raise NotFound(f"Post {post_id} not found!")
+        comment = session.query(Comment).where(Comment.id == comment_id).first()
+        if not comment:
+            raise NotFound(f"Comment {comment_id} not found!")
+        if post.user_id != current_user.id:
+            raise Forbidden("You are not authorized to update this comment!")
+        #   Update comment
+        comment.content = content
+        session.commit()
+        return api_response(message="Update comment successfully.")
+
+
 @postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["DELETE"])
 @token_required
 def delete_comment_from_post(post_id: int, comment_id: int, current_user: User):
 
     with db_session() as session:
-        post = session.query(Post).where(Post.id==post_id).first()
+        post = session.query(Post).where(Post.id == post_id).first()
         if not post:
             raise NotFound(f"Post {post_id} not found!")
         if post.user_id != current_user.id:
             raise Forbidden("You are not authorized to delete this comment!")
-        comment = session.query(Comment).where(Comment.id==comment_id).first()
+        comment = session.query(Comment).where(Comment.id == comment_id).first()
         if not comment:
             raise NotFound(f"Comment {comment_id} not found!")
         #   Delete comment
@@ -335,40 +433,3 @@ def delete_comment_from_post(post_id: int, comment_id: int, current_user: User):
         session.commit()
         current_app.logger.info(f"Delete comment {comment_id} successfully.")
         return api_response(message="Delete comment successfully.")
-
-
-@postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["GET"])
-@token_required
-def list_child_comments(post_id: int, comment_id: int, current_user: User):
-
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
-
-    with db_session() as session:
-        post = session.query(Post).where(Post.id==post_id).first()
-        if not post:
-            raise NotFound(f"Post {post_id} not found!")
-        
-        results = session.query(Comment)  \
-            .where(Comment.parent_comment_id==comment_id)    \
-            .order_by(Comment.created_at.desc())   \
-            .paginate(page=page, per_page=per_page)
-        if not results:
-            raise NotFound("Comments not found!")
-        
-        comments = CommentReadList(
-            comment_tree=[
-                CommentTree.model_validate(result)
-                for result in results
-            ],
-            pagination=Pagination(
-                total=results.total,
-                page=results.page,
-                per_page=results.per_page,
-                pages=results.pages,
-            ),
-        )
-        current_app.logger.info(f"View child comments of comment {comment_id} successfully.")
-        return api_response(
-            data=comments.model_dump(), message="View child comments successfully.", status=200
-        )

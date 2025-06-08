@@ -25,7 +25,9 @@ def gcs_upload(file_obj) -> str:
         blob = bucket.blob(gcs_filename)
         blob.upload_from_file(file_obj, content_type=file_obj.content_type)
 
-        current_app.logger.debug(f"File {file_obj.filename} uploaded to {settings.POST_BUCKET_FOLDER}/.")
+        current_app.logger.debug(
+            f"File {file_obj.filename} uploaded to {settings.POST_BUCKET_FOLDER}/."
+        )
         return unique_filename
     except Exception as error:
         raise InternalServerError(f"Error saving image: {error}.")

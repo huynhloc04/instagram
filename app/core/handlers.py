@@ -2,12 +2,12 @@
 
 from flask import Flask, current_app
 from werkzeug.exceptions import (
-    Conflict, 
-    Unauthorized, 
-    Forbidden, 
-    NotFound, 
-    BadRequest, 
-    InternalServerError
+    Conflict,
+    Unauthorized,
+    Forbidden,
+    NotFound,
+    BadRequest,
+    InternalServerError,
 )
 
 from app.v1.utils import api_response
