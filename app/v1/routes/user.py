@@ -32,7 +32,7 @@ def view_profile(current_user: User):
     )
 
 
-@userRoute.route("/profile", methods=["PUT"])
+@userRoute.route("/me", methods=["PUT"])
 @token_required
 def edit_profile(current_user: User):
 
