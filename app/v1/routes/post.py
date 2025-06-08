@@ -110,9 +110,12 @@ def create_draft_post(current_user: User):
 
     with db_session() as session:
         #   1. Validate also prepare data
-        caption = request.form.get("caption")
-        image_id = request.form.get("image_id")
-        image = ImageCron.query.get(image_id)
+        json_data = request.get_json()
+        if not json_data:
+            raise BadRequest("Please provide data to update.")
+        caption = json_data.get("caption")
+        image_id = json_data.get("image_id")
+        image = session.query(ImageCron).filter(ImageCron.id == image_id).first()
         if not image:
             raise NotFound("Image not found.")
 
@@ -151,9 +154,12 @@ def create_draft_post(current_user: User):
 def create_post_public(current_user: User):
 
     with db_session() as session:
-        caption = request.form.get("caption")
-        image_id = request.form.get("image_id")
-        image = ImageCron.query.get(image_id)
+        json_data = request.get_json()
+        if not json_data:
+            raise BadRequest("Please provide data to update.")
+        caption = json_data.get("caption")
+        image_id = json_data.get("image_id")
+        image = session.query(ImageCron).filter(ImageCron.id == image_id).first()
         if not image:
             raise NotFound("Image not found.")
 
@@ -199,10 +205,13 @@ def update_post_public(post_id: int, current_user: User):
             raise BadRequest("Post already published")
 
         #   1. Validate also prepare data
-        caption = request.form.get("caption")
-        status = request.form.get("status")
-        image_id = request.form.get("image_id")
-        image = ImageCron.query.get(image_id)
+        json_data = request.get_json()
+        if not json_data:
+            raise BadRequest("Please provide data to update.")
+        caption = json_data.get("caption")
+        image_id = json_data.get("image_id")
+        status = json_data.get("status")
+        image = session.query(ImageCron).filter(ImageCron.id == image_id).first()
         if not image:
             raise NotFound("Image not found.")
 
