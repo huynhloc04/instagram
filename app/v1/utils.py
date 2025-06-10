@@ -1,7 +1,12 @@
 import os, time
 from pathlib import Path
+import cProfile
+import pstats
+import io
+from functools import wraps
+from datetime import datetime
 
-from flask import jsonify, request
+from flask import jsonify, request, current_app
 from functools import wraps
 from google.cloud import storage
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
@@ -85,3 +90,28 @@ def register_dependencies(app):
         REQUEST_COUNT.labels(request.method, request.path, response.status_code).inc()
         REQUEST_LATENCY.labels(request.method, request.path).observe(latency)
         return response
+
+
+def cprofile(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # Create cprofile directory if it doesn't exist
+        profile_dir = "cprofile/"
+        if not os.path.exists(profile_dir):
+            os.makedirs(profile_dir)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        profile_path = os.path.join(profile_dir, f"{func.__name__}_{timestamp}.prof")
+
+        pr = cProfile.Profile()
+        pr.enable()
+
+        result = func(*args, **kwargs)
+
+        pr.disable()
+
+        s = io.StringIO()
+        ps = pstats.Stats(pr, stream=s).sort_stats("cumulative")
+        ps.dump_stats(profile_path)
+        return result
+
+    return wrapper
