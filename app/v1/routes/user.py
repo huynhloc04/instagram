@@ -3,7 +3,7 @@ from pydantic import ValidationError
 from werkzeug.exceptions import BadRequest, NotFound, Conflict, InternalServerError
 
 from app.core.database import db_session
-from app.v1.utils import api_response, token_required
+from app.v1.utils import api_response, token_required, cprofile
 from app.v1.models import User, Post, Follow
 from app.v1.schemas.base import Pagination
 from app.v1.schemas.user import UserEdit, UserRead, UserReadList
@@ -17,6 +17,7 @@ userRoute = Blueprint("users", __name__, url_prefix="/users")
 
 @userRoute.route("/me", methods=["GET"])
 @token_required
+@cprofile
 def view_profile(current_user: User):
     try:
         user_profile = current_user.to_dict(
@@ -71,8 +72,6 @@ def view_other_profile(user_id: int, current_user: User):
     user = User.query.get(user_id)
     if not user:
         raise NotFound(f"User with id {user_id} not found.")
-    # response = UserRead.model_validate(user)
-    # return api_response(data=response.dict(), status=200)
     user_profile = user.to_dict(viewer=current_user)
     return api_response(data=user_profile, status=200)
 
