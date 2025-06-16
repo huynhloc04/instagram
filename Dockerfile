@@ -6,7 +6,7 @@ ARG VIRTUAL_ENV=/instagram/.venv
 # ---------- Build Stage ----------
 FROM python:${PYTHON_VERSION} AS builder
 
-# Install system dependencies required to build Python wheels
+# Install system dependencies required to build docker-compose -f docker-compose.yml -f docker-compose.debug.yml up --buildPython wheels
 RUN apk add --no-cache build-base libffi-dev openssl-dev
 
 RUN pip install --no-cache-dir poetry==1.4.2
@@ -21,7 +21,8 @@ WORKDIR /instagram
 
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry install --without dev --no-root && rm -rf ${POETRY_CACHE_DIR}
+RUN poetry install --no-root && rm -rf ${POETRY_CACHE_DIR}
+# RUN poetry install --without dev --no-root && rm -rf ${POETRY_CACHE_DIR}
 
 
 # ---------- Runtime Stage ----------
@@ -39,4 +40,4 @@ COPY . .
 
 EXPOSE 8000
 
-ENTRYPOINT ["gunicorn", "--bind", "0.0.0.0:8000", "app.main:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "16", "app.main:app"]

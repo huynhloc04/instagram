@@ -25,9 +25,9 @@ scheduler = BackgroundScheduler()
 rootRoute = Blueprint("root", __name__, url_prefix="/api/v1")
 
 
-@rootRoute.route("/", methods=["GET"])
+@rootRoute.route("/public", methods=["GET"])
 def index():
-    return api_response(message="Start Instagram web app with the Flask framework.")
+    return api_response(message="This is a public route.")
 
 
 @rootRoute.route("/<string:image_name>", methods=["GET"])

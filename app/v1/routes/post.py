@@ -1,7 +1,9 @@
 from pydantic import ValidationError
 from flask import Blueprint, current_app, request
 from werkzeug.exceptions import BadRequest, NotFound, Conflict, Forbidden
+from flask_limiter.util import get_remote_address
 
+from app.core.extensions import limiter
 from app.core.database import db_session
 from app.v1.models import Post, User, Like, ImageCron, Comment
 from app.v1.schemas.base import Pagination
@@ -12,6 +14,7 @@ from app.v1.controllers.tag import create_tags
 from app.v1.enums import PostStatus, ImageCronEnum
 from app.v1.storage import gcs_upload
 from app.v1.controllers.comment import get_base_comment_and_count
+from app.v1.utils import user_id_from_token_key
 from app.v1.utils import (
     api_response,
     token_required,
@@ -82,6 +85,11 @@ def view_news_feed(current_user: User):
 
 @postRoute.route("/upload", methods=["POST"])
 @token_required
+@limiter.limit(
+    "10/hour",
+    key_func=user_id_from_token_key,
+    error_message="Too many upload media attempts. Please try again later.",
+)
 def upload_media(current_user: User):
     #   1. Validate also prepare data
     uploaded_image = validate_upload_file(request=request)
@@ -106,6 +114,11 @@ def upload_media(current_user: User):
 
 @postRoute.route("/draft", methods=["POST"])
 @token_required
+@limiter.limit(
+    "10/hour",
+    key_func=user_id_from_token_key,
+    error_message="Too many create draft post attempts. Please try again later.",
+)
 def create_draft_post(current_user: User):
 
     with db_session() as session:
@@ -151,6 +164,11 @@ def create_draft_post(current_user: User):
 
 @postRoute.route("/", methods=["POST"])
 @token_required
+@limiter.limit(
+    "10/hour",
+    key_func=user_id_from_token_key,
+    error_message="Too many create post attempts. Please try again later.",
+)
 def create_post_public(current_user: User):
 
     with db_session() as session:
@@ -192,6 +210,11 @@ def create_post_public(current_user: User):
 
 @postRoute.route("/<int:post_id>", methods=["PUT"])
 @token_required
+@limiter.limit(
+    "10/hour",
+    key_func=user_id_from_token_key,
+    error_message="Too many update post attempts. Please try again later.",
+)
 def update_post_public(post_id: int, current_user: User):
 
     with db_session() as session:
@@ -243,6 +266,11 @@ def update_post_public(post_id: int, current_user: User):
 
 @postRoute.route("/<int:post_id>", methods=["DELETE"])
 @token_required
+@limiter.limit(
+    "10/hour",
+    key_func=user_id_from_token_key,
+    error_message="Too many delete post attempts. Please try again later.",
+)
 def delete_post(post_id: int, current_user: User):
 
     with db_session() as session:
@@ -263,6 +291,11 @@ def delete_post(post_id: int, current_user: User):
 
 @postRoute.route("/<int:post_id>/likes", methods=["POST"])
 @token_required
+@limiter.limit(
+    "60/minute",
+    key_func=user_id_from_token_key,
+    error_message="Too many like post attempts. Please try again later.",
+)
 def like_post(post_id: int, current_user: User):
 
     with db_session() as session:
@@ -284,6 +317,11 @@ def like_post(post_id: int, current_user: User):
 
 @postRoute.route("/<int:post_id>/unlikes", methods=["POST"])
 @token_required
+@limiter.limit(
+    "60/minute",
+    key_func=user_id_from_token_key,
+    error_message="Too many unlike post attempts. Please try again later.",
+)
 def unlike_post(post_id: int, current_user: User):
     with db_session() as session:
         post = Post.query.get(post_id)
@@ -368,6 +406,11 @@ def list_child_comments(post_id: int, comment_id: int, current_user: User):
 @postRoute.route("/<int:post_id>/comments", methods=["POST"])
 @postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["POST"])
 @token_required
+@limiter.limit(
+    "30/hour",
+    key_func=user_id_from_token_key,
+    error_message="Too many comment on post attempts. Please try again later.",
+)
 def comment_on_post(post_id: int, current_user: User, comment_id: int = None):
     json_data = request.get_json()
 
@@ -399,6 +442,11 @@ def comment_on_post(post_id: int, current_user: User, comment_id: int = None):
 
 @postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["PUT"])
 @token_required
+@limiter.limit(
+    "30/hour",
+    key_func=user_id_from_token_key,
+    error_message="Too many update comment attempts. Please try again later.",
+)
 def update_comment(post_id: int, current_user: User, comment_id: int = None):
 
     json_data = request.get_json()
@@ -426,6 +474,11 @@ def update_comment(post_id: int, current_user: User, comment_id: int = None):
 
 @postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["DELETE"])
 @token_required
+@limiter.limit(
+    "30/hour",
+    key_func=user_id_from_token_key,
+    error_message="Too many delete comment attempts. Please try again later.",
+)
 def delete_comment_from_post(post_id: int, comment_id: int, current_user: User):
 
     with db_session() as session:

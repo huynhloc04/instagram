@@ -1,7 +1,10 @@
 from flask import Blueprint, current_app, request
 from pydantic import ValidationError
 from werkzeug.exceptions import BadRequest, NotFound, Conflict, InternalServerError
+from flask_limiter.util import get_remote_address
 
+from app.core.extensions import limiter
+from app.v1.utils import user_id_from_token_key
 from app.core.database import db_session
 from app.v1.utils import api_response, token_required, cprofile
 from app.v1.models import User, Post, Follow
@@ -110,6 +113,11 @@ def get_list_post(user_id: int, current_user: User):
 
 @userRoute.route("/<int:user_id>/follow", methods=["POST"])
 @token_required
+@limiter.limit(
+    "20/hour",
+    key_func=user_id_from_token_key,
+    error_message="Too many follow user attempts. Please try again later.",
+)
 def follow_user(user_id: int, current_user: User):
 
     with db_session() as session:
@@ -135,6 +143,11 @@ def follow_user(user_id: int, current_user: User):
 
 @userRoute.route("/<int:user_id>/unfollow", methods=["DELETE"])
 @token_required
+@limiter.limit(
+    "20/hour",
+    key_func=user_id_from_token_key,
+    error_message="Too many unfollow user attempts. Please try again later.",
+)
 def unfollow_user(user_id: int, current_user: User):
 
     with db_session() as session:
@@ -240,6 +253,11 @@ def get_following(user_id: int, current_user: User):
 
 @userRoute.route("/search", methods=["GET"])
 @token_required
+@limiter.limit(
+    "30/minute",
+    key_func=user_id_from_token_key,
+    error_message="Too many search user attempts. Please try again later.",
+)
 def search_user(current_user: User):
     search_query = request.args.get("search", "", type=str)
     page = request.args.get("page", 1, type=int)

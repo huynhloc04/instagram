@@ -6,10 +6,11 @@ import io
 from functools import wraps
 from datetime import datetime
 
-from flask import jsonify, request, current_app
+from flask import jsonify, request
 from functools import wraps
 from google.cloud import storage
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from flask_limiter.util import get_remote_address
 from werkzeug.exceptions import NotFound, Unauthorized, BadRequest
 
 from app.v1.models import User
@@ -46,6 +47,29 @@ def token_required(func):
         return func(current_user=current_user, *args, **kwargs)
 
     return wrapper
+
+
+def user_or_ip_key():
+    json_data = request.get_json(silent=True) or {}
+    username = json_data.get("username")
+    if username:
+        return f"username:{username}"
+    return f"ip:{get_remote_address()}"
+
+
+def user_id_from_token_key():
+    """
+    Returns a unique key for the current user based on JWT token identity.
+    Falls back to IP address if no valid token is present.
+    """
+    try:
+        verify_jwt_in_request(optional=True)
+        user_id = get_jwt_identity()
+        if user_id:
+            return f"user_id:{user_id}"
+    except Exception:
+        pass
+    return f"ip:{get_remote_address()}"
 
 
 def allowed_file(filename):
