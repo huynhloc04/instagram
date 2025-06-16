@@ -1,0 +1,24 @@
+version: '3.9'
+
+services:
+  app:
+    container_name: flask_app_debug
+    ports:
+      - 8000:8000
+      - 5678:5678
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    entrypoint: [
+      "python", "-m", "debugpy",
+      "--listen", "0.0.0.0:5678",
+      "--wait-for-client",
+      "-m", "flask", "run",
+      "--host=0.0.0.0",
+      "--port=8000"
+    ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/public"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

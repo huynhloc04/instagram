@@ -1,16 +1,27 @@
-__pycache__
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
-.venv
-.env
+# Virtual Environment
+.venv/
 
+# Logs and Data
 *.log
 *.txt
-gcs_key.json
-
 .idx/.data/
+
+# Application
 app/static/
 
-docker-compose.yml
+# Credentials and Keys
+.env
 gcs.json
+gcs_key.json
 
+# IDE
+.vscode/
+
+# Deployment
 deploy_copy.yml

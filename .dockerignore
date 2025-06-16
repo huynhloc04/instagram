@@ -1,12 +1,19 @@
+# Python bytecode
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Data and logs
 *.db
 *.log
-.git
-.vscode
+
+# Development and documentation
+.git/
+.vscode/
 .gitignore
 Dockerfile
 README.md
+
+# Test files
 tests/

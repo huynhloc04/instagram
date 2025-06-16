@@ -24,6 +24,8 @@ class Settings(BaseSettings):
 
     GCS_KEY: str
 
+    RATELIMIT_STORAGE_URL: str
+
     @property
     def db_url(self) -> str:
         return f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}"
