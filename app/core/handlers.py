@@ -10,6 +10,8 @@ from werkzeug.exceptions import (
     InternalServerError,
 )
 
+# from flask_limiter.errors import RateLimitExceeded
+
 from app.v1.utils import api_response
 
 
@@ -44,3 +46,22 @@ def register_error_handlers(app: Flask):
     def handle_internal_server_error(error):
         current_app.logger.error(str(error), exc_info=True)
         return api_response(message=str(error), status=500)
+
+    # @app.errorhandler(429)
+    # def handle_rate_limit_error(error):
+    #     # Try to extract headers from the error if available
+    #     headers = getattr(error, 'headers', {}) or {}
+    #     response = api_response(
+    #         message=str(error.description) if hasattr(error, 'description') else "Too many requests.",
+    #         status=429
+    #     )
+    #     # Attach rate limit headers if present
+    #     for header in [
+    #         "Retry-After",
+    #         "X-RateLimit-Limit",
+    #         "X-RateLimit-Remaining",
+    #         "X-RateLimit-Reset"
+    #     ]:
+    #         if header in headers:
+    #             response.headers[header] = headers[header]
+    #     return response

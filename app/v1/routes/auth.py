@@ -4,21 +4,28 @@ from pydantic import ValidationError
 from flask import Blueprint, request, current_app
 from flask_jwt_extended import create_access_token, create_refresh_token
 from werkzeug.exceptions import BadRequest
+from flask_limiter.util import get_remote_address
 
+from app.core.extensions import limiter
 from app.core.database import db_session
 from app.core.config import settings
 from app.v1.utils import api_response
 from app.v1.schemas.user import UserCreate, UserRead, UserLoginResponse
 from app.v1.controllers.user import create_user
 from app.v1.controllers.auth import check_user_register, check_user_login
+from app.v1.utils import user_or_ip_key
 
 
 authRoute = Blueprint("auth", __name__, url_prefix="/auth")
 
 
 @authRoute.route("/register", methods=["POST"])
+@limiter.limit(
+    "2/day",
+    key_func=get_remote_address,
+    error_message="Too many register attempts. Please try again later.",
+)
 def register():
-
     with db_session() as session:
         # 1. Serialize and validate input JSON with Pydantic
         json_data = request.get_json()
@@ -48,6 +55,11 @@ def register():
 
 
 @authRoute.route("/login", methods=["POST"])
+@limiter.limit(
+    "5/minute",
+    key_func=user_or_ip_key,
+    error_message="Too many login attempts. Please try again later.",
+)
 def login():
 
     json_data = request.get_json()
