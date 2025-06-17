@@ -20,8 +20,5 @@ app/static/
 gcs.json
 gcs_key.json
 
-# IDE
-.vscode/
-
 # Deployment
 deploy_copy.yml
