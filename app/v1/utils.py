@@ -6,7 +6,7 @@ import io
 from functools import wraps
 from datetime import datetime
 
-from flask import jsonify, request
+from flask import jsonify, request, g
 from functools import wraps
 from google.cloud import storage
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
@@ -106,11 +106,11 @@ def register_dependencies(app):
 
     @app.before_request
     def start_timer():
-        request.start_time = time.time()
+        g.start_time = time.time()
 
     @app.after_request
     def record_metrics(response):
-        latency = time.time() - request.start_time
+        latency = time.time() - g.start_time
         REQUEST_COUNT.labels(request.method, request.path, response.status_code).inc()
         REQUEST_LATENCY.labels(request.method, request.path).observe(latency)
         return response
