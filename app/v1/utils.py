@@ -110,9 +110,13 @@ def register_dependencies(app):
 
     @app.after_request
     def record_metrics(response):
-        latency = time.time() - g.start_time
-        REQUEST_COUNT.labels(request.method, request.path, response.status_code).inc()
-        REQUEST_LATENCY.labels(request.method, request.path).observe(latency)
+        start_time = getattr(g, "start_time", None)
+        if start_time is not None:
+            latency = time.time() - start_time
+            REQUEST_COUNT.labels(
+                request.method, request.path, response.status_code
+            ).inc()
+            REQUEST_LATENCY.labels(request.method, request.path).observe(latency)
         return response
 
 
