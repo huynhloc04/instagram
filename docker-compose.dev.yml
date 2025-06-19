@@ -2,11 +2,12 @@ version: '3.9'
 
 services:
   app:
-    container_name: flask_app_debug
+    container_name: app_dev
     ports:
       - 8000:8000
       - 5678:5678
     environment:
+      - FLASK_APP=app.main
       - FLASK_ENV=development
       - FLASK_APP=app.main
       - FLASK_DEBUG=1
@@ -23,3 +24,21 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+  
+  mysql:
+    image: mysql:latest
+    container_name: mysql_db
+    ports:
+      - 3306:3306
+    env_file: 
+      - ".env"
+    environment:
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:

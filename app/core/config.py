@@ -17,12 +17,12 @@ class Settings(BaseSettings):
     MYSQL_DATABASE: str
 
     BUCKET_NAME: str
-    POST_BUCKET_FOLDER: str
+    BUCKET_FOLDER: str
 
     JWT_ACCESS_TOKEN_EXPIRES: str
     JWT_REFRESH_TOKEN_EXPIRES: str
 
-    GCS_KEY: str
+    GCS_KEY: str | None = None
 
     RATELIMIT_STORAGE_URL: str
 
