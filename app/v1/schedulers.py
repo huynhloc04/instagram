@@ -28,7 +28,7 @@ def scheduler_delete_image(app):
 
             #   Delete on the Google Cloud Storage
             for image_name in image_names:
-                gcs_filename = os.path.join(settings.POST_BUCKET_FOLDER, image_name[0])
+                gcs_filename = os.path.join(settings.BUCKET_FOLDER, image_name[0])
                 gcs_delete(gcs_filename)
                 deleted_image_names.append(image_name[0])
 

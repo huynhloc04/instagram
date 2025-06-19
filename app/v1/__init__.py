@@ -33,7 +33,7 @@ def index():
 @rootRoute.route("/<string:image_name>", methods=["GET"])
 def serve_image(image_name: str):
     try:
-        gcs_filename = os.path.join(settings.POST_BUCKET_FOLDER, image_name)
+        gcs_filename = os.path.join(settings.BUCKET_FOLDER, image_name)
         blob = bucket.blob(gcs_filename)
         if not blob.exists():
             NotFound(404, description="File not found.")

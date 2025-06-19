@@ -20,13 +20,13 @@ def gcs_upload(file_obj) -> str:
     try:
         sanitized_filename = secure_filename(file_obj.filename)
         unique_filename = f"{str(uuid.uuid4())}_{sanitized_filename}"
-        gcs_filename = os.path.join(settings.POST_BUCKET_FOLDER, unique_filename)
+        gcs_filename = os.path.join(settings.BUCKET_FOLDER, unique_filename)
 
         blob = bucket.blob(gcs_filename)
         blob.upload_from_file(file_obj, content_type=file_obj.content_type)
 
         current_app.logger.debug(
-            f"File {file_obj.filename} uploaded to {settings.POST_BUCKET_FOLDER}/."
+            f"File {file_obj.filename} uploaded to {settings.BUCKET_FOLDER}/."
         )
         return unique_filename
     except Exception as error:
