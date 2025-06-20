@@ -9,7 +9,7 @@
 # Afterwards the docker image instagram:stage will be built and pushed to the image repository.
 
 
-name: Build and Test Pipeline
+name: Build Pipeline
 
 on:
   pull_request:
