@@ -6,7 +6,7 @@
 # Description: This workflow will run for every commit on any branch except the main branch. It will build and then test the app with multiple Python versions.
 
 
-name: Build and Test
+name: Test Pipeline
 
 on:
   push:
