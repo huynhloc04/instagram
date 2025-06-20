@@ -12,7 +12,6 @@
 # We can separate deploy to develop and main to different workflows since they are different environments.
 
 name: Deploy to Production
-name: Deploy to Production
 
 on:
   push:
@@ -51,6 +50,7 @@ jobs:
               sudo mkdir -p /opt/instagram
               sudo chown $USER:$USER /opt/instagram
             fi
+
 
       - name: Create .env file
         run: |
