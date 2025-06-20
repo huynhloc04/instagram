@@ -85,7 +85,7 @@ jobs:
 
 
       - name: Copy files to server
-        uses: appleboy/scp-action@v0.1.4
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{secrets.SERVER_HOST}}
           username: ${{secrets.SERVER_USER}}
@@ -93,6 +93,12 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE || '' }}
           source: "docker-compose.yml,docker-compose.prod.yml,.env"
           target: "/opt/instagram"
+          tar_exec: "false"
+          debug: true
+          overwrite: true
+          rm: false
+          script: |
+            echo "Files copied successfully to /opt/instagram"
 
 
       # https://github.com/hoverkraft-tech/compose-action
