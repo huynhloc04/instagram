@@ -10,9 +10,7 @@ name: Test Pipeline
 
 on:
   push:
-    branches-ignore: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+    branches-ignore: [main, develop]
 
 jobs:
   format:
