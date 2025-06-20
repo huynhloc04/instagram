@@ -93,6 +93,7 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE || '' }}
           source: "docker-compose.yml,docker-compose.prod.yml,.env"
           target: "/opt/instagram"
+          tar_exec: "false"
 
 
       # https://github.com/hoverkraft-tech/compose-action
