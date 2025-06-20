@@ -12,6 +12,7 @@
 # We can separate deploy to develop and main to different workflows since they are different environments.
 
 name: Deploy to Production
+name: Deploy to Production
 
 on:
   push:
@@ -113,5 +114,7 @@ jobs:
               docker compose logs
               exit 1
             fi
+            echo "Deployment verified successfully!"
+            docker image prune -f
             echo "Deployment verified successfully!"
             docker image prune -f
