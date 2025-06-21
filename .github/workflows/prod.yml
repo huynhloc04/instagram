@@ -37,6 +37,7 @@ jobs:
           chmod 644 ~/.ssh/known_hosts
 
       
+      
       - name: Setup Server
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -45,11 +46,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
-            eval $(ssh-agent -s)
-            echo "${{ secrets.SSH_PRIVATE_KEY }}" | ssh-add -
-            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-              ${{secrets.SERVER_USER}}@${{secrets.SERVER_HOST}} '
-              if [ -d "/opt/instagram" ]; then
+            if [ -d "/opt/instagram" ]; then
                 cd /opt/instagram/
                 if [ -f "docker-compose.yml" ]; then
                   echo "Existing compose file found. Stopping services..."
@@ -61,7 +58,7 @@ jobs:
                 echo "Directory /opt/instagram not found. Creating it."
                 sudo mkdir -p /opt/instagram
                 sudo chown -R '"${{secrets.SERVER_USER}}:${{secrets.SERVER_USER}}"' /opt/instagram/
-              fi'
+              fi
             
 
       - name: Create .env file
