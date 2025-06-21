@@ -18,6 +18,7 @@ app/static/
 # Credentials and Keys
 .env
 gcs.json
+.secrets
 gcs_key.json
 
 # Deployment
