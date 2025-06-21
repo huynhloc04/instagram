@@ -14,3 +14,31 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: always
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    ports:
+      - "80:80"
+      - "443:443"
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    restart: always
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    command: >
+      certonly
+      --webroot
+      -w /var/www/certbot/
+      --force-renewal
+      -d cloudtar.online
+      --email hloc5874@gmail.com
+      --agree-tos
