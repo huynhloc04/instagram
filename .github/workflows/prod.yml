@@ -49,17 +49,9 @@ jobs:
             if [ ! -d "/opt/instagram" ]; then
               sudo mkdir -p /opt/instagram
               sudo chown -R ${{secrets.SERVER_USER}}:${{secrets.SERVER_USER}} /opt/instagram
-            fi
-
-      - name: Clean target folder
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{secrets.SERVER_HOST}}
-          username: ${{secrets.SERVER_USER}}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.PASSPHRASE || '' }}
-          script: |
-            if [ -d "/opt/instagram" ]; then
+            else
+              echo "Directory /opt/instagram already exists"
+              echo "Cleaning directory /opt/instagram"
               sudo rm -rf /opt/instagram/*
             fi
             
@@ -85,20 +77,16 @@ jobs:
 
 
       - name: Copy files to server
-        uses: appleboy/scp-action@v1.0.0
-        with:
-          host: ${{secrets.SERVER_HOST}}
-          username: ${{secrets.SERVER_USER}}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.PASSPHRASE || '' }}
-          source: "docker-compose.yml,docker-compose.prod.yml,.env"
-          target: "/opt/instagram"
-          tar_exec: "false"
-          debug: true
-          overwrite: true
-          rm: false
-          script: |
-            echo "Files copied successfully to /opt/instagram"
+        run: |
+          #   Add private key to ssh-agent to avoid entering passphrase
+          eval $(ssh-agent -s)
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | ssh-add -
+          #   Copy files to server
+          echo "Copying files to server"
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            docker-compose.yml docker-compose.prod.yml .env \
+            ${{secrets.SERVER_USER}}@${{secrets.SERVER_HOST}}:opt/instagram
+          echo "Files copied successfully to /opt/instagram/"
 
 
       # https://github.com/hoverkraft-tech/compose-action
@@ -116,7 +104,7 @@ jobs:
             cd /opt/instagram
             chmod 644 docker-compose.yml docker-compose.prod.yml .env
             docker compose -f ./docker-compose.yml -f ./docker-compose.prod.yml pull
-            docker compose -f ./docker-compose.yml -f ./docker-compose.prod.yml up -d
+            docker compose -f ./docker-compose.yml -f ./docker-compose.prod.yml up -d --remove-orphans
 
           
       - name: Verify Deployment
@@ -134,7 +122,5 @@ jobs:
               docker compose logs
               exit 1
             fi
-            echo "Deployment verified successfully!"
-            docker image prune -f
             echo "Deployment verified successfully!"
             docker image prune -f
