@@ -88,7 +88,7 @@ jobs:
           username: ${{secrets.SERVER_USER}}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
-          source: "docker-compose.yml,docker-compose.prod.yml,.env"
+          source: "docker-compose.yml,docker-compose.prod.yml,.env,nginx.conf"
           target: "/opt/instagram/"
           script: echo "Files copied successfully to /opt/instagram/"
 
@@ -127,7 +127,3 @@ jobs:
             fi
             echo "Deployment verified successfully!"
             docker image prune -f
-
-
-
-            
