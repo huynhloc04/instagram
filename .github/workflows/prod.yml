@@ -57,7 +57,7 @@ jobs:
               else
                 echo "Directory /opt/instagram not found. Creating it."
                 sudo mkdir -p /opt/instagram
-                sudo chown -R "${{secrets.SERVER_USER}}":"${{secrets.SERVER_USER}}" /opt/instagram/
+                sudo chown -R "${{ secrets.SERVER_USER }}":"${{ secrets.SERVER_USER }}" /opt/instagram/
               fi
             
 
