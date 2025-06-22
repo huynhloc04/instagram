@@ -40,7 +40,7 @@ services:
       -w /var/www/certbot/
       --force-renewal
       -d cloudtar.online
-      --email hloc5874@gmail.com
+      --email ${LETSENCRYPT_EMAIL}
       --agree-tos
 
 volumes:

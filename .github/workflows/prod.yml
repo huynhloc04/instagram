@@ -37,7 +37,6 @@ jobs:
           chmod 644 ~/.ssh/known_hosts
 
       
-      
       - name: Setup Server
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -72,6 +71,7 @@ jobs:
           echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
           echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> .env
           echo "BUCKET_NAME=${{ secrets.BUCKET_NAME }}" >> .env
+          echo "LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}" >> .env
           echo "BUCKET_FOLDER=${{ secrets.BUCKET_FOLDER }}" >> .env
           echo "JWT_ACCESS_TOKEN_EXPIRES=${{ secrets.JWT_ACCESS_TOKEN_EXPIRES }}" >> .env
           echo "JWT_REFRESH_TOKEN_EXPIRES=${{ secrets.JWT_REFRESH_TOKEN_EXPIRES }}" >> .env
