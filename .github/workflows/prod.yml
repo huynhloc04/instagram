@@ -37,7 +37,6 @@ jobs:
           chmod 644 ~/.ssh/known_hosts
 
       
-      
       - name: Setup Server
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -57,7 +56,7 @@ jobs:
               else
                 echo "Directory /opt/instagram not found. Creating it."
                 sudo mkdir -p /opt/instagram
-                sudo chown -R '"${{secrets.SERVER_USER}}:${{secrets.SERVER_USER}}"' /opt/instagram/
+                sudo chown -R "${{ secrets.SERVER_USER }}":"${{ secrets.SERVER_USER }}" /opt/instagram/
               fi
             
 
@@ -72,6 +71,7 @@ jobs:
           echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
           echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> .env
           echo "BUCKET_NAME=${{ secrets.BUCKET_NAME }}" >> .env
+          echo "LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}" >> .env
           echo "BUCKET_FOLDER=${{ secrets.BUCKET_FOLDER }}" >> .env
           echo "JWT_ACCESS_TOKEN_EXPIRES=${{ secrets.JWT_ACCESS_TOKEN_EXPIRES }}" >> .env
           echo "JWT_REFRESH_TOKEN_EXPIRES=${{ secrets.JWT_REFRESH_TOKEN_EXPIRES }}" >> .env
@@ -88,7 +88,7 @@ jobs:
           username: ${{secrets.SERVER_USER}}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
-          source: "docker-compose.yml,docker-compose.prod.yml,.env"
+          source: "docker-compose.yml,docker-compose.prod.yml,.env,nginx.conf"
           target: "/opt/instagram/"
           script: echo "Files copied successfully to /opt/instagram/"
 
