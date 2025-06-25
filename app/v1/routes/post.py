@@ -5,7 +5,7 @@ from flask_limiter.util import get_remote_address
 
 from app.core.extensions import limiter
 from app.core.database import db_session
-from app.v1.models import Post, User, Like, ImageCron, Comment
+from app.v1.models import Post, User, Like, ImageCron, Comment, PostTag, Tag
 from app.v1.schemas.base import Pagination
 from app.v1.schemas.post import PostCreate, PostEdit, PostReadList
 from app.v1.schemas.comment import CommentReadList, CommentTree
@@ -495,3 +495,49 @@ def delete_comment_from_post(post_id: int, comment_id: int, current_user: User):
         session.commit()
         current_app.logger.info(f"Delete comment {comment_id} successfully.")
         return api_response(message="Delete comment successfully.")
+
+
+@postRoute.route("/search", methods=["GET"])
+@token_required
+@limiter.limit(
+    "10/minute",
+    key_func=user_id_from_token_key,
+    error_message="Too many search post attempts. Please try again later.",
+)
+def search_post(current_user: User):
+    tag = request.args.get("tag", "", type=str)
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
+    with db_session() as session:
+        posts = (
+            session.query(Post)
+            .join(PostTag, Post.id == PostTag.post_id)
+            .join(Tag, Tag.id == PostTag.tag_id)
+            .filter(Tag.tag_name == tag)
+            .order_by(Post.created_at.desc())
+            .paginate(page=page, per_page=per_page)
+        )
+
+        posts_by_tag = PostReadList(
+            posts=[
+                post.to_dict(
+                    current_user=current_user,
+                    include_user=True,
+                    include_like=True,
+                    include_comment=True,
+                )
+                for post in posts
+            ],
+            pagination=Pagination(
+                total=posts.total,
+                page=posts.page,
+                per_page=posts.per_page,
+                pages=posts.pages,
+            ),
+        )
+        current_app.logger.info(f"Search post by tag {tag} successfully.")
+        return api_response(
+            data=posts_by_tag.model_dump(),
+            message=f"Search post by tag {tag} successfully.",
+            status=200,
+        )
