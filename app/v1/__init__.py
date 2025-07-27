@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, Blueprint
+from flask import Flask, Blueprint, jsonify
 from dotenv import load_dotenv
 from werkzeug.exceptions import NotFound
 from prometheus_client import make_wsgi_app, REGISTRY
@@ -25,9 +25,9 @@ scheduler = BackgroundScheduler()
 rootRoute = Blueprint("root", __name__, url_prefix="/api/v1")
 
 
-@rootRoute.route("/public", methods=["GET"])
+@rootRoute.route("/health", methods=["GET"])
 def index():
-    return api_response(message="This is a public route.")
+    return jsonify({"status": "healthy"}), 200
 
 
 @rootRoute.route("/<string:image_name>", methods=["GET"])
