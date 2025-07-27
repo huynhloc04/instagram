@@ -20,7 +20,7 @@ on:
 jobs:
   format:
     name: Code Quality Checks
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, V1]
 
     steps:
     - name: Checkout code
@@ -44,7 +44,7 @@ jobs:
 
   # test:
   #   name: Test with Docker Compose
-  #   runs-on: ubuntu-latest
+  #   runs-on: [self-hosted, V1]
   #   needs: format
 
   #   steps:
@@ -72,7 +72,7 @@ jobs:
   build:
     name: Build and Push Docker Images
     needs: [format]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, V1]
     
     steps:
       - name: Checkout code

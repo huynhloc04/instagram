@@ -15,7 +15,7 @@ on:
 jobs:
   format:
     name: Code Quality Checks
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, V1]
 
     steps:
     - name: Checkout code
@@ -40,7 +40,7 @@ jobs:
 
   # test:
   #   name: Test with Python ${{ matrix.python-version }}
-  #   runs-on: ubuntu-latest
+  #   runs-on: [self-hosted, V1]
   #   strategy:
   #     matrix:
   #       python-version: ["3.8", "3.9", "3.10", "3.11"]
