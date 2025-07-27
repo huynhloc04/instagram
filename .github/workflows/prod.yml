@@ -22,8 +22,7 @@ on:
 jobs:
   deploy:
     name: Deploy to GCE
-    # runs-on: [self-hosted, V1]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, V1]
     strategy:
       matrix:
         server: [V1, V2]
@@ -36,13 +35,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup SSH and add host key
-        run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          ssh-keyscan -H "${{secrets[matrix.host]}}" >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
 
       - name: Setup Server
         uses: appleboy/ssh-action@v1.2.0
@@ -63,7 +55,7 @@ jobs:
                 docker compose -f ./docker-compose.yml -f ./docker-compose.prod.yml down --remove-orphans
               fi
               echo "Cleaning directory..."
-              find . -mindepth 1 -delete
+              rm -f docker-compose.yml docker-compose.prod.yml
             fi
 
       - name: Copy Configuration Files
@@ -85,7 +77,7 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
             cd /opt/instagram/
-            chmod 644 docker-compose.yml docker-compose.prod.yml
+            chmod 600 docker-compose.yml docker-compose.prod.yml
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
             export DOCKER_IMAGE=${{secrets.DOCKERHUB_USERNAME}}/instagram:latest
             docker compose -f ./docker-compose.yml -f ./docker-compose.prod.yml pull
