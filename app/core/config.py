@@ -22,8 +22,6 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRES: str
     JWT_REFRESH_TOKEN_EXPIRES: str
 
-    GCS_KEY: str | None = None
-
     RATELIMIT_STORAGE_URL: str
 
     @property

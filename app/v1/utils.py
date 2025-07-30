@@ -93,16 +93,6 @@ def find_file(filename: str, start_dir: Path = Path.cwd()) -> Path | None:
     return None or ""
 
 
-def get_gcs_client():
-    if settings.GCS_KEY:
-        filepath = find_file(filename=settings.GCS_KEY)
-        if os.path.isfile(filepath):
-            client = storage.Client.from_service_account_json(filepath)
-    else:
-        client = storage.Client()
-    return client
-
-
 def register_dependencies(app):
 
     @app.before_request
