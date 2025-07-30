@@ -36,6 +36,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Download image tag
+        uses: actions/download-artifact@v4
+        with:
+          name: image-tag
+
+      - name: Read image tag
+        id: image_tag
+        run: |
+          echo "IMAGE_TAG=$(cat image-tag.txt)" >> $GITHUB_ENV
+
       - name: Setup Server
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -79,8 +89,7 @@ jobs:
             cd /opt/instagram/
             chmod 600 docker-compose.yml docker-compose.prod.yml
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-            export DOCKER_IMAGE=${{secrets.DOCKERHUB_USERNAME}}/instagram:latest
-            echo "DOCKER_IMAGE=$DOCKER_IMAGE" >> .env
+            export DOCKER_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/instagram:${{ env.IMAGE_TAG }}
             docker compose -f ./docker-compose.yml -f ./docker-compose.prod.yml pull
             docker compose -f ./docker-compose.yml -f ./docker-compose.prod.yml up -d
 
@@ -94,6 +103,7 @@ jobs:
           script_stop: true
           script: |
             cd /opt/instagram/
+            export DOCKER_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/instagram:${{ env.IMAGE_TAG }}
             if ! docker compose ps | grep -q "Up"; then
               echo "Deployment failed on Flask ${{ matrix.server }}. Checking logs..."
               docker compose logs

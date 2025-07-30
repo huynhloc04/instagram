@@ -8,6 +8,7 @@ from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.core.config import settings
+from app.core.extensions import limiter
 from app.core.handlers import register_error_handlers
 from app.core.extensions import register_extensions
 from app.v1.routes.auth import authRoute
@@ -15,7 +16,7 @@ from app.v1.routes.user import userRoute
 from app.v1.routes.post import postRoute
 from app.logs.config import init_logging
 from app.v1.storage import bucket
-from app.v1.utils import api_response, register_dependencies
+from app.v1.utils import register_dependencies
 from app.v1.schedulers import scheduler_delete_image
 
 
@@ -26,6 +27,7 @@ rootRoute = Blueprint("root", __name__, url_prefix="/api/v1")
 
 
 @rootRoute.route("/health", methods=["GET"])
+@limiter.exempt
 def index():
     return jsonify({"status": "healthy"}), 200
 
