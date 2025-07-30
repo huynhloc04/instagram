@@ -107,12 +107,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
-
-      - name: Save image tag
-        run: echo "sha-${GITHUB_SHA}" > image-tag.txt
-
-      - name: Upload image tag
-        uses: actions/upload-artifact@v4
-        with:
-          name: image-tag
-          path: image-tag.txt
