@@ -6,12 +6,12 @@ import uuid
 from flask import current_app
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import NotFound, InternalServerError
+from google.cloud import storage
 
 from app.core.config import settings
-from app.v1.utils import get_gcs_client
 
 
-client = get_gcs_client()
+client = storage.Client(project="instagram-321a8")
 bucket = client.bucket(settings.BUCKET_NAME)
 
 
