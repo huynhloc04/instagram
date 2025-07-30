@@ -1,0 +1,71 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    container_name: instagram_devcontainer
+    volumes:
+      - ..:/instagram:cached
+      - /instagram/.venv
+      - /instagram/__pycache__
+      - /instagram/app/__pycache__
+    ports:
+      - "8000:8000"
+      - "5678:5678"
+    environment:
+      - FLASK_APP=app.main
+      - FLASK_DEBUG=1
+      - PYTHONPATH=/instagram
+    command: sleep infinity
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - instagram_network
+
+  mysql:
+    image: mysql:latest
+    container_name: mysql_devcontainer
+    ports:
+      - "3306:3306"
+    env_file: 
+      - "../.env"
+    environment:
+      MYSQL_USER: ${MYSQL_USER:-instagram_user}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-instagram_db}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-instagram_password}
+      MYSQL_HOST: ${MYSQL_HOST:-mysql}
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+    networks:
+      - instagram_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  redis:
+    image: redis:latest
+    container_name: redis_devcontainer
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - instagram_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mysql_dev_data:
+  redis_dev_data:
+
+networks:
+  instagram_network:
+    driver: bridge 
