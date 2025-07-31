@@ -6,6 +6,8 @@ ARG VIRTUAL_ENV=/instagram/.venv
 # ---------- Build Stage ----------
 FROM python:${PYTHON_VERSION} AS builder
 
+ARG VIRTUAL_ENV
+
 RUN apk add --no-cache build-base libffi-dev openssl-dev && \
     pip install --no-cache-dir poetry==1.4.2
 

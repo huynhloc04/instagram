@@ -13,18 +13,14 @@ services:
     environment:
       - FLASK_APP=app.main
       - FLASK_DEBUG=1
+      - GOOGLE_APPLICATION_CREDENTIALS=/instagram/credential.json
     volumes:
-      # Mount source code for live reloading
       - .:/instagram
       - ~/.config/gcloud:/root/.config/gcloud:ro
       # Exclude virtual environment and cache files
       - /instagram/.venv
-      - /instagram/__pycache__
-      - /instagram/.pytest_cache
-      - /instagram/.coverage
-      - /instagram/htmlcov
     entrypoint: [
-      "python", "-m", "debugpy",
+      "python3", "-m", "debugpy",
       "--listen", "0.0.0.0:5678",
       # "--wait-for-client",
       "-m", "flask", "run",

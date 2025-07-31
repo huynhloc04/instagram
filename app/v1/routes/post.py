@@ -1,3 +1,4 @@
+import uuid
 from pydantic import ValidationError
 from flask import Blueprint, current_app, request
 from werkzeug.exceptions import BadRequest, NotFound, Conflict, Forbidden
@@ -12,7 +13,7 @@ from app.v1.schemas.comment import CommentReadList, CommentTree
 from app.v1.controllers.post import create_post, update_post
 from app.v1.controllers.tag import create_tags
 from app.v1.enums import PostStatus, ImageCronEnum
-from app.v1.storage import gcs_upload
+from app.v1.storage import _generate_put_singed_url, _generate_get_singed_url
 from app.v1.controllers.comment import get_base_comment_and_count
 from app.v1.utils import user_id_from_token_key
 from app.v1.utils import (
@@ -83,33 +84,51 @@ def view_news_feed(current_user: User):
         )
 
 
-@postRoute.route("/upload", methods=["POST"])
+@postRoute.route("/sign-url", methods=["POST"])
 @token_required
-@limiter.limit(
-    "10/hour",
-    key_func=user_id_from_token_key,
-    error_message="Too many upload media attempts. Please try again later.",
-)
-def upload_media(current_user: User):
+def get_signed_url(current_user: User):
     #   1. Validate also prepare data
-    uploaded_image = validate_upload_file(request=request)
-    image_name = gcs_upload(file_obj=uploaded_image)
-    #   2. Upload directly to Google Cloud Storage (GCS).
-    current_app.logger.info("Upload media successfully.")
+    filename = request.form.get("filename", "default.png", type=str)
+    expiration = request.form.get("expiration", 60, type=int)
 
+    #   2. Get presigned url information
+    presigned_dict = _generate_put_singed_url(filename=filename, expiration=expiration)
+
+    return api_response(
+        message="Get signed url successfully.",
+        data=presigned_dict,
+        status=201,
+    )
+
+
+@postRoute.route("/sync-image", methods=["POST"])
+@token_required
+def save_image(current_user: User):
+    #   1. Validate also prepare data
+    filename = request.form.get("filename", "default.png", type=str)
+    if not filename:
+        raise BadRequest("Filename is required.")
+
+    #   2. Save image to database
     with db_session() as session:
         image = ImageCron(
-            image_name=image_name,
+            image_name=filename,
             status=ImageCronEnum.unused.value,
         )
         session.add(image)
         session.commit()
 
-        return api_response(
-            message="Upload media successfully.",
-            data={"image_id": image.id},
-            status=201,
-        )
+        return api_response(message="Save image successfully.", status=201)
+
+
+@postRoute.route("/get-image", methods=["GET"])
+@token_required
+def get_image(current_user: User):
+    filename = request.form.get("filename", type=str)
+    if not filename:
+        raise BadRequest("Filename is required.")
+    singed_url = _generate_get_singed_url(filename=filename)
+    return api_response(message="Get image successfully.", status=200, data=singed_url)
 
 
 @postRoute.route("/draft", methods=["POST"])

@@ -81,8 +81,8 @@ class PostTag(TimeMixin):
 
 
 class ImageCron(BaseModel):
-
     __table_name__ = "image_crons"
+
     image_name = db.Column(db.String(255), nullable=False)
     status = db.Column(db.String(20), nullable=False, default="unused")
     post_id = db.Column(db.Integer, db.ForeignKey("posts.id"), nullable=True)

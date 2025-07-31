@@ -8,13 +8,11 @@ from datetime import datetime
 
 from flask import jsonify, request, g
 from functools import wraps
-from google.cloud import storage
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 from flask_limiter.util import get_remote_address
 from werkzeug.exceptions import NotFound, Unauthorized, BadRequest
 
 from app.v1.models import User
-from app.core.config import settings
 from app.logs.config import REQUEST_COUNT, REQUEST_LATENCY
 
 
