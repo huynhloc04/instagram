@@ -96,6 +96,7 @@ jobs:
               fi
               echo "Cleaning directory..."
               rm -f docker-compose.yml docker-compose.prod.yml
+              docker image prune -af
             fi
 
       - name: Copy Configuration Files
