@@ -36,15 +36,14 @@ class Post(BaseModel):
             "deleted": self.deleted,
         }
         with db_session() as session:
-            image = (
-                session.query(ImageCron)
-                .join(Post, ImageCron.post_id == self.id)
-                .filter(Post.id == self.id)
-                .first()
+            image_id = (
+                session.query(ImageCron.id)
+                .filter(ImageCron.post_id == self.id)
+                .scalar()
             )
-            if not image:
+            if not image_id:
                 raise NotFound(f"Cannot find image for post {self.id}")
-            post_dict["image_name"] = image.image_name
+            post_dict["image_id"] = image_id
             if include_user:
                 user = session.query(User).where(User.id == self.user_id).first()
                 if not user:
