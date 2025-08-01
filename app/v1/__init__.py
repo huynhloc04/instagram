@@ -1,8 +1,5 @@
-import os
-
 from flask import Flask, Blueprint, jsonify
 from dotenv import load_dotenv
-from werkzeug.exceptions import NotFound
 from prometheus_client import make_wsgi_app, REGISTRY
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -15,14 +12,12 @@ from app.v1.routes.auth import authRoute
 from app.v1.routes.user import userRoute
 from app.v1.routes.post import postRoute
 from app.logs.config import init_logging
-from app.v1.storage import bucket
 from app.v1.utils import register_dependencies
 from app.v1.schedulers import scheduler_delete_image
 
 
 load_dotenv()
 scheduler = BackgroundScheduler()
-
 rootRoute = Blueprint("root", __name__, url_prefix="/api/v1")
 
 
@@ -30,19 +25,6 @@ rootRoute = Blueprint("root", __name__, url_prefix="/api/v1")
 @limiter.exempt
 def index():
     return jsonify({"status": "healthy"}), 200
-
-
-@rootRoute.route("/<string:image_name>", methods=["GET"])
-def serve_image(image_name: str):
-    try:
-        gcs_filename = os.path.join(settings.BUCKET_FOLDER, image_name)
-        blob = bucket.blob(gcs_filename)
-        if not blob.exists():
-            NotFound(404, description="File not found.")
-
-        return blob.public_url
-    except Exception as error:
-        raise IndentationError(str(error))
 
 
 def create_app():

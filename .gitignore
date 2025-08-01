@@ -18,9 +18,5 @@ certbot/
 
 # Credentials and Keys
 .env
-gcs.json
+credential.json
 .secrets
-gcs_key.json
-
-# Deployment
-deploy_copy.yml

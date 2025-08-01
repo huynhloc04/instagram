@@ -2,8 +2,9 @@
 
 import os
 import uuid
+import datetime
+import mimetypes
 
-from flask import current_app
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import NotFound, InternalServerError
 from google.cloud import storage
@@ -11,29 +12,63 @@ from google.cloud import storage
 from app.core.config import settings
 
 
-client = storage.Client(project="instagram-321a8")
+client = storage.Client(project=settings.GOOGLE_CLOUD_PROJECT)
 bucket = client.bucket(settings.BUCKET_NAME)
 
 
-def gcs_upload(file_obj) -> str:
+def _get_content_type(filename: str) -> str:
+    # Detect MIME type
+    mime_type, _ = mimetypes.guess_type(filename)
+    if mime_type is None:
+        mime_type = "application/octet-stream"
+    return mime_type
+
+
+def _generate_put_singed_url(filename: str, expiration: int = 60) -> dict:
     """Uploads a file to the bucket."""
     try:
-        sanitized_filename = secure_filename(file_obj.filename)
+        #   Prepare filename
+        sanitized_filename = secure_filename(filename)
         unique_filename = f"{str(uuid.uuid4())}_{sanitized_filename}"
-        gcs_filename = os.path.join(settings.BUCKET_FOLDER, unique_filename)
+        filename_path = os.path.join(settings.BUCKET_FOLDER, unique_filename)
+        content_type = _get_content_type(filename)
 
-        blob = bucket.blob(gcs_filename)
-        blob.upload_from_file(file_obj, content_type=file_obj.content_type)
-
-        current_app.logger.debug(
-            f"File {file_obj.filename} uploaded to {settings.BUCKET_FOLDER}/."
+        #   Get presign url
+        blob = bucket.blob(filename_path)
+        singed_url = blob.generate_signed_url(
+            version="v4",
+            method="PUT",
+            expiration=datetime.timedelta(seconds=expiration),
+            content_type=content_type,
         )
-        return unique_filename
+
+        return {
+            "singed_url": singed_url,
+            "filename": unique_filename,
+            "expires_in": expiration,
+            "content_type": content_type,
+        }
     except Exception as error:
-        raise InternalServerError(f"Error saving image: {error}.")
+        raise InternalServerError(f"Error while getting presigned url: {error}.")
 
 
-def gcs_delete(filename: str) -> None:
+def _generate_get_singed_url(filename: str, expiration: int = 60) -> dict:
+    """Uploads a file to the bucket."""
+    try:
+        filename_path = os.path.join(settings.BUCKET_FOLDER, filename)
+        blob = bucket.blob(filename_path)
+        singed_url = blob.generate_signed_url(
+            version="v4",
+            method="GET",
+            expiration=datetime.timedelta(seconds=expiration),
+            response_disposition="inline",  # Prevent download image
+        )
+        return {"singed_url": singed_url, "expires_in": expiration}
+    except Exception as error:
+        raise InternalServerError(f"Error while getting presigned url: {error}.")
+
+
+def _storage_delete(filename: str) -> None:
     """Deletes a blob from the bucket."""
     try:
         blob = bucket.blob(filename)
@@ -43,4 +78,4 @@ def gcs_delete(filename: str) -> None:
         blob.delete()
         return True
     except Exception as error:
-        raise InternalServerError(f"Error deleting image: {error}.")
+        raise InternalServerError(f"Error while deleting file: {error}.")

@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     BUCKET_NAME: str
     BUCKET_FOLDER: str
 
+    # Google Cloud Storage Configuration
+    GOOGLE_CLOUD_PROJECT: str
+
     JWT_ACCESS_TOKEN_EXPIRES: str
     JWT_REFRESH_TOKEN_EXPIRES: str
 
