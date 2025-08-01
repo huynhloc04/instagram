@@ -101,7 +101,7 @@ def get_signed_url(current_user: User):
     )
 
 
-@postRoute.route("/sync-image", methods=["POST"])
+@postRoute.route("/save-image", methods=["POST"])
 @token_required
 def save_image(current_user: User):
     #   1. Validate also prepare data
@@ -118,16 +118,22 @@ def save_image(current_user: User):
         session.add(image)
         session.commit()
 
-        return api_response(message="Save image successfully.", status=201)
+        return api_response(
+            message="Save image successfully.",
+            status=201,
+            data={"image_id": image.id},
+        )
 
 
 @postRoute.route("/get-image", methods=["GET"])
 @token_required
 def get_image(current_user: User):
-    filename = request.form.get("filename", type=str)
-    if not filename:
-        raise BadRequest("Filename is required.")
-    singed_url = _generate_get_singed_url(filename=filename)
+    image_id = request.form.get("image_id", type=int)
+    with db_session() as session:
+        image = session.query(ImageCron).filter(ImageCron.id == image_id).first()
+        if not image:
+            raise NotFound("Image not found.")
+    singed_url = _generate_get_singed_url(filename=image.image_name)
     return api_response(message="Get image successfully.", status=200, data=singed_url)
 
 
