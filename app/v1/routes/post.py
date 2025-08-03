@@ -84,8 +84,8 @@ def view_news_feed(current_user: User):
 
 
 @postRoute.route("/sign-url", methods=["POST"])
-@jwt_required
-def get_signed_url():
+@token_required
+def get_signed_url(current_user: User):
     #   1. Validate also prepare data
     filename = request.form.get("filename", "default.png", type=str)
     expiration = request.form.get("expiration", 60, type=int)
@@ -101,8 +101,8 @@ def get_signed_url():
 
 
 @postRoute.route("/save-image", methods=["POST"])
-@jwt_required
-def save_image():
+@token_required
+def save_image(current_user: User):
     #   1. Validate also prepare data
     filename = request.form.get("filename", "default.png", type=str)
     if not filename:
@@ -125,8 +125,8 @@ def save_image():
 
 
 @postRoute.route("/get-image", methods=["GET"])
-@jwt_required
-def get_image():
+@token_required
+def get_image(current_user: User):
     image_id = request.form.get("image_id", type=int)
     with db_session() as session:
         image = session.query(ImageCron).filter(ImageCron.id == image_id).first()
@@ -364,8 +364,8 @@ def unlike_post(post_id: int, current_user: User):
 
 
 @postRoute.route("/<int:post_id>/comments", methods=["GET"])
-@jwt_required
-def list_base_comments(post_id: int):
+@token_required
+def list_base_comments(post_id: int, current_user: User):
 
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
@@ -384,8 +384,8 @@ def list_base_comments(post_id: int):
 
 
 @postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["GET"])
-@jwt_required
-def list_child_comments(post_id: int, comment_id: int):
+@token_required
+def list_child_comments(post_id: int, comment_id: int, current_user: User):
 
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)

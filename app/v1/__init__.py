@@ -42,7 +42,7 @@ def create_app():
     #   Register blueprints
     rootRoute.register_blueprint(authRoute)
     rootRoute.register_blueprint(userRoute)
-    # rootRoute.register_blueprint(postRoute)
+    rootRoute.register_blueprint(postRoute)
     app.register_blueprint(rootRoute)
 
     #   Register error handlers
