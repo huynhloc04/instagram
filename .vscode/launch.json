@@ -2,8 +2,8 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Instagram",
-            "type": "python",
+            "name": "Flask: Instagram",
+            "type": "debugpy",
             "request": "attach",
             "connect": {
                 "host": "localhost",
@@ -11,11 +11,11 @@
             },
             "pathMappings": [
                 {
-                    "localRoot": "${workspaceFolder}/app",
+                    "localRoot": "${workspaceFolder}",
                     "remoteRoot": "/instagram"
                 }
             ],
-            "justMyCode": true
+            "justMyCode": false
         }
     ]
 }

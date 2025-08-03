@@ -8,7 +8,7 @@ from datetime import datetime
 
 from flask import jsonify, request, g
 from functools import wraps
-from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity, get_jwt
 from flask_limiter.util import get_remote_address
 from werkzeug.exceptions import NotFound, Unauthorized, BadRequest
 
