@@ -8,13 +8,13 @@ from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required,
     get_jwt,
+    decode_token,
 )
 
 from app.core.extensions import limiter
 from app.core.database import db_session
 from app.core.config import settings
-from app.v1.utils import api_response, token_required
-from app.v1.models.user import User
+from app.v1.utils import api_response
 from app.v1.schemas.user import UserCreate, UserRead, UserLoginResponse
 from app.v1.services.user import create_user
 from app.v1.services.auth import _check_user_register, _check_user_login
@@ -81,6 +81,21 @@ def login():
         expires_delta=timedelta(seconds=int(settings.JWT_REFRESH_TOKEN_EXPIRES)),
     )
 
+    # Extract JTIs and store token pair
+    try:
+        access_jti = decode_token(access_token)["jti"]
+        refresh_jti = decode_token(refresh_token)["jti"]
+
+        # Store token pair relationship
+        redis_client.store_token_pair(
+            access_jti=access_jti,
+            refresh_jti=refresh_jti,
+            expires_in=int(settings.JWT_REFRESH_TOKEN_EXPIRES),
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error storing token pair during login: {e}")
+
+    #   Validate response
     login_user = UserLoginResponse(
         access_token=access_token,
         refresh_token=refresh_token,
@@ -101,7 +116,6 @@ def refresh():
     Refresh access token
     """
     identity = get_jwt_identity()
-    jti = get_jwt()["jti"]
     access_token = create_access_token(
         identity=identity,
         expires_delta=timedelta(seconds=int(settings.JWT_ACCESS_TOKEN_EXPIRES)),
@@ -110,11 +124,38 @@ def refresh():
         identity=identity,
         expires_delta=timedelta(seconds=int(settings.JWT_REFRESH_TOKEN_EXPIRES)),
     )
+
+    # Extract new JTIs and manage token pairs
+    try:
+        old_refresh_jti = get_jwt()["jti"]
+        old_access_jti = redis_client.get_paired_token(old_refresh_jti, "refresh")
+        new_access_jti = decode_token(access_token)["jti"]
+        new_refresh_jti = decode_token(refresh_token)["jti"]
+        # Remove old token pair mapping
+        if old_access_jti:
+            redis_client.remove_token_pair(old_access_jti, old_refresh_jti)
+
+        # Store new token pair relationship
+        redis_client.store_token_pair(
+            access_jti=new_access_jti,
+            refresh_jti=new_refresh_jti,
+            expires_in=int(settings.JWT_REFRESH_TOKEN_EXPIRES),
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error managing token pairs during refresh: {e}")
+
     current_app.logger.info(f"Refresh access token successfully.")
+
     #   Revoke old refresh token
     redis_client.add_to_blacklist(
-        jti, expires_in=int(settings.JWT_REFRESH_TOKEN_EXPIRES)
+        old_refresh_jti, expires_in=int(settings.JWT_REFRESH_TOKEN_EXPIRES)
     )
+    # Also blacklist old access token if it exists
+    if old_access_jti:
+        redis_client.add_to_blacklist(
+            old_access_jti, expires_in=int(settings.JWT_ACCESS_TOKEN_EXPIRES)
+        )
+
     return api_response(
         message="Refresh access token successfully.",
         data={"access_token": access_token, "refresh_token": refresh_token},
@@ -126,21 +167,22 @@ def refresh():
 @jwt_required(verify_type=False)
 def logout():
     """
-    Logout user
+    Logout user - blacklists both access and refresh tokens
     """
-    #   Get JWT information
     jwt = get_jwt()
-    jti = jwt["jti"]
-    token_type = jwt["type"]
 
-    #   Add token to blacklist
-    redis_client.add_to_blacklist(
-        jti, expires_in=int(settings.JWT_REFRESH_TOKEN_EXPIRES)
+    #   Blacklist both tokens in the pair
+    redis_client.blacklist_token_pair(
+        jti=jwt["jti"],
+        token_type=jwt["type"],
+        expires_in=int(settings.JWT_REFRESH_TOKEN_EXPIRES),
     )
-    current_app.logger.info(f"Logout successfully. {token_type} token revoked.")
+    current_app.logger.info(
+        f"Logout successfully. Both access and refresh tokens revoked."
+    )
     return api_response(
-        message=f"Logout successfully. {token_type} token revoked.",
-        status=201,
+        message="Logout successfully. Both access and refresh tokens revoked.",
+        status=200,
     )
 
 

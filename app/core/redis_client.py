@@ -47,20 +47,101 @@ class RedisClient:
             print(f"Error checking blacklist: {e}")
             return False
 
-    def remove_from_blacklist(self, jti: str) -> bool:
+    def store_token_pair(
+        self, access_jti: str, refresh_jti: str, expires_in: int
+    ) -> bool:
         """
-        Remove a JWT token ID from the blacklist
+        Store the relationship between access token and refresh token JTIs
 
         Args:
-            jti: JWT ID to remove
+            access_jti: Access token JTI
+            refresh_jti: Refresh token JTI
+            expires_in: Time in seconds until the mapping expires
+
+        Returns:
+            bool: True if successfully stored, False otherwise
+        """
+        try:
+            # Store bidirectional mapping
+            self.redis_client.setex(
+                f"token_pair:access:{access_jti}", expires_in, refresh_jti
+            )
+            self.redis_client.setex(
+                f"token_pair:refresh:{refresh_jti}", expires_in, access_jti
+            )
+            return True
+        except Exception as e:
+            print(f"Error storing token pair: {e}")
+            return False
+
+    def get_paired_token(self, jti: str, token_type: str) -> str:
+        """
+        Get the paired token JTI for a given token
+
+        Args:
+            jti: JWT ID to find pair for
+            token_type: 'access' or 'refresh'
+
+        Returns:
+            str: Paired token JTI or None if not found
+        """
+        try:
+            return self.redis_client.get(f"token_pair:{token_type}:{jti}")
+        except Exception as e:
+            print(f"Error getting paired token: {e}")
+            return None
+
+    def blacklist_token_pair(self, jti: str, token_type: str, expires_in: int) -> bool:
+        """
+        Blacklist both tokens in a pair
+
+        Args:
+            jti: JWT ID of one token in the pair
+            token_type: 'access' or 'refresh' - type of the provided JTI
+            expires_in: Time in seconds until the blacklist entries expire
+
+        Returns:
+            bool: True if successfully blacklisted both tokens, False otherwise
+        """
+        try:
+            # Blacklist the current token
+            self.add_to_blacklist(jti, expires_in)
+
+            # Find and blacklist the paired token
+            paired_jti = self.get_paired_token(jti, token_type)
+            if paired_jti:
+                self.add_to_blacklist(paired_jti, expires_in)
+
+                # Clean up the token pair mappings
+                self.redis_client.delete(
+                    f"token_pair:access:{jti if token_type == 'access' else paired_jti}"
+                )
+                self.redis_client.delete(
+                    f"token_pair:refresh:{jti if token_type == 'refresh' else paired_jti}"
+                )
+
+            return True
+        except Exception as e:
+            print(f"Error blacklisting token pair: {e}")
+            return False
+
+    def remove_token_pair(self, access_jti: str, refresh_jti: str) -> bool:
+        """
+        Remove token pair mapping (used when replacing tokens)
+
+        Args:
+            access_jti: Access token JTI
+            refresh_jti: Refresh token JTI
 
         Returns:
             bool: True if successfully removed, False otherwise
         """
         try:
-            return self.redis_client.delete(f"blacklist:{jti}") > 0
+            self.redis_client.delete(f"token_pair:access:{access_jti}")
+            self.redis_client.delete(f"token_pair:refresh:{refresh_jti}")
+            return True
         except Exception as e:
-            print(f"Error removing from blacklist: {e}")
+            print(f"Error removing token pair: {e}")
             return False
 
 
