@@ -1,8 +1,8 @@
-import uuid
 from pydantic import ValidationError
 from flask import Blueprint, current_app, request
 from werkzeug.exceptions import BadRequest, NotFound, Conflict, Forbidden
 from flask_limiter.util import get_remote_address
+from flask_jwt_extended import jwt_required
 
 from app.core.extensions import limiter
 from app.core.database import db_session
@@ -10,16 +10,15 @@ from app.v1.models import Post, User, Like, ImageCron, Comment, PostTag, Tag
 from app.v1.schemas.base import Pagination
 from app.v1.schemas.post import PostCreate, PostEdit, PostReadList
 from app.v1.schemas.comment import CommentReadList, CommentTree
-from app.v1.controllers.post import create_post, update_post
-from app.v1.controllers.tag import create_tags
+from app.v1.services.post import create_post, update_post
+from app.v1.services.tag import create_tags
 from app.v1.enums import PostStatus, ImageCronEnum
 from app.v1.storage import _generate_put_singed_url, _generate_get_singed_url
-from app.v1.controllers.comment import get_base_comment_and_count
+from app.v1.services.comment import get_base_comment_and_count
 from app.v1.utils import user_id_from_token_key
 from app.v1.utils import (
     api_response,
     token_required,
-    validate_upload_file,
 )
 
 
@@ -85,8 +84,8 @@ def view_news_feed(current_user: User):
 
 
 @postRoute.route("/sign-url", methods=["POST"])
-@token_required
-def get_signed_url(current_user: User):
+@jwt_required
+def get_signed_url():
     #   1. Validate also prepare data
     filename = request.form.get("filename", "default.png", type=str)
     expiration = request.form.get("expiration", 60, type=int)
@@ -102,8 +101,8 @@ def get_signed_url(current_user: User):
 
 
 @postRoute.route("/save-image", methods=["POST"])
-@token_required
-def save_image(current_user: User):
+@jwt_required
+def save_image():
     #   1. Validate also prepare data
     filename = request.form.get("filename", "default.png", type=str)
     if not filename:
@@ -126,8 +125,8 @@ def save_image(current_user: User):
 
 
 @postRoute.route("/get-image", methods=["GET"])
-@token_required
-def get_image(current_user: User):
+@jwt_required
+def get_image():
     image_id = request.form.get("image_id", type=int)
     with db_session() as session:
         image = session.query(ImageCron).filter(ImageCron.id == image_id).first()
@@ -365,8 +364,8 @@ def unlike_post(post_id: int, current_user: User):
 
 
 @postRoute.route("/<int:post_id>/comments", methods=["GET"])
-@token_required
-def list_base_comments(post_id: int, current_user: User):
+@jwt_required
+def list_base_comments(post_id: int):
 
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
@@ -385,8 +384,8 @@ def list_base_comments(post_id: int, current_user: User):
 
 
 @postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["GET"])
-@token_required
-def list_child_comments(post_id: int, comment_id: int, current_user: User):
+@jwt_required
+def list_child_comments(post_id: int, comment_id: int):
 
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)

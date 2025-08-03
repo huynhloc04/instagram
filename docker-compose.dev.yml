@@ -20,7 +20,7 @@ services:
       # Exclude virtual environment and cache files
       - /instagram/.venv
     entrypoint: [
-      "python3", "-m", "debugpy",
+      "python", "-m", "debugpy",
       "--listen", "0.0.0.0:5678",
       # "--wait-for-client",
       "-m", "flask", "run",
@@ -39,7 +39,7 @@ services:
     ports:
       - 3306:3306
     env_file: 
-      - ".env"
+      - .env
     environment:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_DATABASE: ${MYSQL_DATABASE}

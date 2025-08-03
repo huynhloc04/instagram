@@ -7,13 +7,14 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.core.config import settings
 from app.core.extensions import limiter
 from app.core.handlers import register_error_handlers
-from app.core.extensions import register_extensions
+from app.core.extensions import register_extensions, jwt
 from app.v1.routes.auth import authRoute
 from app.v1.routes.user import userRoute
 from app.v1.routes.post import postRoute
 from app.logs.config import init_logging
 from app.v1.utils import register_dependencies
 from app.v1.schedulers import scheduler_delete_image
+from app.core.redis_client import redis_client
 
 
 load_dotenv()
@@ -41,7 +42,7 @@ def create_app():
     #   Register blueprints
     rootRoute.register_blueprint(authRoute)
     rootRoute.register_blueprint(userRoute)
-    rootRoute.register_blueprint(postRoute)
+    # rootRoute.register_blueprint(postRoute)
     app.register_blueprint(rootRoute)
 
     #   Register error handlers
@@ -49,6 +50,24 @@ def create_app():
 
     #   Setup logging
     init_logging(app)
+
+    # Setup JWT
+    @jwt.token_in_blocklist_loader
+    def token_in_blocklist_callback(jwt_header, jwt_data):
+        jti = jwt_data["jti"]
+        return redis_client.is_blacklisted(jti)
+
+    # @jwt.user_lookup_loader
+    # def user_lookup_callback(jwt_header, jwt_data):
+    #     identity = jwt_data["sub"]
+    #     with db_session() as session:
+    #         user = session.query(User).filter(User.id == identity).scalar()
+    #         if user and user.last_logout_all_devices:
+    #             # Check if token was issued before the last logout all devices
+    #             token_issued_at = jwt_data.get("iat")
+    #             if token_issued_at and user.last_logout_all_devices.timestamp() > token_issued_at:
+    #                 return None  # Token is invalid
+    #     return user
 
     register_dependencies(app)
     app.wsgi_app = DispatcherMiddleware(

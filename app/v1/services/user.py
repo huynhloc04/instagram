@@ -9,7 +9,6 @@ def create_user(data: UserCreate, session: Session) -> User:
     user = User(**data.model_dump(exclude={"password"}))
     user.set_password(data.password)
     session.add(user)
-    session.flush()
     return user
 
 
