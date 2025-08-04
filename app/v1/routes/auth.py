@@ -1,3 +1,4 @@
+import uuid
 from datetime import timedelta
 
 from flask import Blueprint, request, current_app
@@ -8,7 +9,6 @@ from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required,
     get_jwt,
-    decode_token,
 )
 
 from app.core.extensions import limiter
@@ -20,7 +20,6 @@ from app.v1.services.user import create_user
 from app.v1.services.auth import _check_user_register, _check_user_login
 from app.v1.utils import user_or_ip_key
 from app.core.redis_client import redis_client
-from werkzeug.exceptions import InternalServerError
 
 
 authRoute = Blueprint("auth", __name__, url_prefix="/auth")
@@ -71,29 +70,20 @@ def login():
     password = json_data.get("password")
 
     user = _check_user_login(username=username, password=password)
+    #   Generate a random JIT and just for both access and refresh token
+    token_jit = str(uuid.uuid4())
+    extra_claims = {"jit": token_jit}
     #   Create access_token and refresh_token
     access_token = create_access_token(
         identity=str(user.id),
+        additional_claims=extra_claims,
         expires_delta=timedelta(seconds=int(settings.JWT_ACCESS_TOKEN_EXPIRES)),
     )
     refresh_token = create_refresh_token(
         identity=str(user.id),
+        additional_claims=extra_claims,
         expires_delta=timedelta(seconds=int(settings.JWT_REFRESH_TOKEN_EXPIRES)),
     )
-
-    # Extract JTIs and store token pair
-    try:
-        access_jti = decode_token(access_token)["jti"]
-        refresh_jti = decode_token(refresh_token)["jti"]
-
-        # Store token pair relationship
-        redis_client.store_token_pair(
-            access_jti=access_jti,
-            refresh_jti=refresh_jti,
-            expires_in=int(settings.JWT_REFRESH_TOKEN_EXPIRES),
-        )
-    except Exception as e:
-        current_app.logger.error(f"Error storing token pair during login: {e}")
 
     #   Validate response
     login_user = UserLoginResponse(
@@ -116,45 +106,25 @@ def refresh():
     Refresh access token
     """
     identity = get_jwt_identity()
+    old_token_jit = get_jwt()["jit"]
+    #   Generate a random JIT and just for both access and refresh token
+    new_token_jit = str(uuid.uuid4())
+    extra_claims = {"jit": new_token_jit}
     access_token = create_access_token(
         identity=identity,
+        additional_claims=extra_claims,
         expires_delta=timedelta(seconds=int(settings.JWT_ACCESS_TOKEN_EXPIRES)),
     )
     refresh_token = create_refresh_token(
         identity=identity,
+        additional_claims=extra_claims,
         expires_delta=timedelta(seconds=int(settings.JWT_REFRESH_TOKEN_EXPIRES)),
     )
-
-    # Extract new JTIs and manage token pairs
-    try:
-        old_refresh_jti = get_jwt()["jti"]
-        old_access_jti = redis_client.get_paired_token(old_refresh_jti, "refresh")
-        new_access_jti = decode_token(access_token)["jti"]
-        new_refresh_jti = decode_token(refresh_token)["jti"]
-        # Remove old token pair mapping
-        if old_access_jti:
-            redis_client.remove_token_pair(old_access_jti, old_refresh_jti)
-
-        # Store new token pair relationship
-        redis_client.store_token_pair(
-            access_jti=new_access_jti,
-            refresh_jti=new_refresh_jti,
-            expires_in=int(settings.JWT_REFRESH_TOKEN_EXPIRES),
-        )
-    except Exception as e:
-        current_app.logger.error(f"Error managing token pairs during refresh: {e}")
-
-    current_app.logger.info(f"Refresh access token successfully.")
-
     #   Revoke old refresh token
     redis_client.add_to_blacklist(
-        old_refresh_jti, expires_in=int(settings.JWT_REFRESH_TOKEN_EXPIRES)
+        jit=old_token_jit,
+        expires_in=int(settings.JWT_REFRESH_TOKEN_EXPIRES),
     )
-    # Also blacklist old access token if it exists
-    if old_access_jti:
-        redis_client.add_to_blacklist(
-            old_access_jti, expires_in=int(settings.JWT_ACCESS_TOKEN_EXPIRES)
-        )
 
     return api_response(
         message="Refresh access token successfully.",
@@ -170,18 +140,21 @@ def logout():
     Logout user - blacklists both access and refresh tokens
     """
     jwt = get_jwt()
+    token_type = jwt["type"]
+    token_jit = jwt["jit"]
 
     #   Blacklist both tokens in the pair
-    redis_client.blacklist_token_pair(
-        jti=jwt["jti"],
-        token_type=jwt["type"],
-        expires_in=int(settings.JWT_REFRESH_TOKEN_EXPIRES),
+    redis_client.add_to_blacklist(
+        jit=token_jit,
+        expires_in=(
+            int(settings.JWT_ACCESS_TOKEN_EXPIRES)
+            if token_type == "access"
+            else int(settings.JWT_REFRESH_TOKEN_EXPIRES)
+        ),
     )
-    current_app.logger.info(
-        f"Logout successfully. Both access and refresh tokens revoked."
-    )
+    current_app.logger.info(f"Logout successfully, tokens revoked.")
     return api_response(
-        message="Logout successfully. Both access and refresh tokens revoked.",
+        message=f"Logout successfully, tokens revoked.",
         status=200,
     )
 
