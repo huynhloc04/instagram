@@ -49,7 +49,7 @@ class RedisClient:
             print(f"Error checking blacklist: {e}")
             return False
 
-    def add_to_logout_all_devices(self, user_id: str) -> bool:
+    def logout_all_devices(self, user_id: str) -> bool:
         """
         Add a user ID to the logout all devices list. Mark the time of logout all devices.
         Args:

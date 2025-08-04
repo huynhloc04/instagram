@@ -1,3 +1,5 @@
+# Reference: https://github.com/jod35/JWT-Auth-for-Flask
+
 import uuid
 from datetime import timedelta
 
@@ -22,6 +24,7 @@ from app.v1.utils import user_or_ip_key
 from app.core.redis_client import redis_client
 from app.v1.utils import token_required
 from app.v1.models.user import User
+from werkzeug.exceptions import Unauthorized
 
 
 authRoute = Blueprint("auth", __name__, url_prefix="/auth")
@@ -135,6 +138,40 @@ def refresh():
     )
 
 
+@authRoute.route("/verify-password", methods=["POST"])
+@token_required
+def verify_password(current_user: User):
+    """
+    Verify old password
+    """
+    password = request.form.get("password")
+    if not current_user.check_password(password):
+        raise Unauthorized(f"Incorrect password!")
+    return api_response(
+        message="Password verified successfully.",
+        status=201,
+    )
+
+
+@authRoute.route("/change-password", methods=["PUT"])
+@token_required
+def change_password(current_user: User):
+    """
+    Change user password
+    """
+    password = request.form.get("password")
+    with db_session() as session:
+        current_user.set_password(password)
+        session.commit()
+        session.refresh(current_user)
+    #   Logout all devices
+    redis_client.logout_all_devices(user_id=current_user.id)
+    return api_response(
+        message="Password changed successfully.",
+        status=200,
+    )
+
+
 @authRoute.route("/logout", methods=["POST"])
 @jwt_required(verify_type=False)
 def logout():
@@ -167,7 +204,7 @@ def logout_all_devices(current_user: User):
     """
     Logout user from all devices
     """
-    redis_client.add_to_logout_all_devices(user_id=current_user.id)
+    redis_client.logout_all_devices(user_id=current_user.id)
     return api_response(
         message="Logged out from all devices successfully.",
         status=201,
