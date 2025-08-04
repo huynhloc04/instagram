@@ -11,6 +11,7 @@ __pycache__/
 *.log
 *.txt
 .idx/.data/
+cprofile/
 
 # Application
 app/static/

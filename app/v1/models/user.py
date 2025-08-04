@@ -15,7 +15,6 @@ class User(BaseModel):
     fullname = db.Column(db.String(100))
     bio = db.Column(db.Text)
     profile_picture = db.Column(db.String(255), default="default.jpg")
-    # last_logout_all_devices = db.Column(db.DateTime, nullable=True)
 
     def __repr__(self):
         return f"User {self.username}"
@@ -25,10 +24,6 @@ class User(BaseModel):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-
-    # def logout_all_devices(self):
-    #     """Mark that user has logged out from all devices"""
-    #     self.last_logout_all_devices = datetime.utcnow()
 
     def to_dict(self, viewer=None, excludes: list[str] = None) -> dict:
         user_dict = {
