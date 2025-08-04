@@ -54,20 +54,14 @@ def create_app():
     # Setup JWT
     @jwt.token_in_blocklist_loader
     def token_in_blocklist_callback(jwt_header, jwt_data):
-        jit_token = jwt_data["jit"]
-        return redis_client.is_blacklisted(jit_token)
-
-    # @jwt.user_lookup_loader
-    # def user_lookup_callback(jwt_header, jwt_data):
-    #     identity = jwt_data["sub"]
-    #     with db_session() as session:
-    #         user = session.query(User).filter(User.id == identity).scalar()
-    #         if user and user.last_logout_all_devices:
-    #             # Check if token was issued before the last logout all devices
-    #             token_issued_at = jwt_data.get("iat")
-    #             if token_issued_at and user.last_logout_all_devices.timestamp() > token_issued_at:
-    #                 return None  # Token is invalid
-    #     return user
+        jit = jwt_data["jit"]
+        identity = jwt_data["sub"]
+        iat = jwt_data["iat"]
+        if redis_client.is_blacklisted(jit) or redis_client.is_logout_all_devices(
+            identity, iat
+        ):
+            return True
+        return False
 
     register_dependencies(app)
     app.wsgi_app = DispatcherMiddleware(

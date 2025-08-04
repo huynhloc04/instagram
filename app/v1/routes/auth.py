@@ -20,6 +20,8 @@ from app.v1.services.user import create_user
 from app.v1.services.auth import _check_user_register, _check_user_login
 from app.v1.utils import user_or_ip_key
 from app.core.redis_client import redis_client
+from app.v1.utils import token_required
+from app.v1.models.user import User
 
 
 authRoute = Blueprint("auth", __name__, url_prefix="/auth")
@@ -108,8 +110,8 @@ def refresh():
     identity = get_jwt_identity()
     old_token_jit = get_jwt()["jit"]
     #   Generate a random JIT and just for both access and refresh token
-    new_token_jit = str(uuid.uuid4())
-    extra_claims = {"jit": new_token_jit}
+    token_jit = str(uuid.uuid4())
+    extra_claims = {"jit": token_jit}
     access_token = create_access_token(
         identity=identity,
         additional_claims=extra_claims,
@@ -152,32 +154,21 @@ def logout():
             else int(settings.JWT_REFRESH_TOKEN_EXPIRES)
         ),
     )
-    current_app.logger.info(f"Logout successfully, tokens revoked.")
+    current_app.logger.info(f"Logout successfully.")
     return api_response(
-        message=f"Logout successfully, tokens revoked.",
+        message=f"Logout successfully.",
         status=200,
     )
 
 
-# @authRoute.route("/logout-all-devices", methods=["POST"])
-# @token_required
-# def logout_all_devices(current_user: User):
-#     """
-#     Logout user from all devices
-#     """
-#     with db_session() as session:
-#         # Get the current user from session to ensure we're working with the latest data
-#         user = session.query(User).filter(User.id == current_user.id).first()
-#         if user:
-#             user.logout_all_devices()
-#             session.commit()
-#             current_app.logger.info(f"User {user.username} logged out from all devices successfully.")
-#             return api_response(
-#                 message="Logged out from all devices successfully.",
-#                 status=200,
-#             )
-#         else:
-#             return api_response(
-#                 message="User not found.",
-#                 status=404,
-#             )
+@authRoute.route("/logout-all", methods=["POST"])
+@token_required
+def logout_all_devices(current_user: User):
+    """
+    Logout user from all devices
+    """
+    redis_client.add_to_logout_all_devices(user_id=current_user.id)
+    return api_response(
+        message="Logged out from all devices successfully.",
+        status=201,
+    )
