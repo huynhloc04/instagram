@@ -146,7 +146,9 @@ def verify_password(current_user: User):
     """
     password = request.form.get("password")
     if not current_user.check_password(password):
+        current_app.logger.info(f"Incorrect password!")
         raise Unauthorized(f"Incorrect password!")
+    current_app.logger.info(f"Password verified successfully.")
     return api_response(
         message="Password verified successfully.",
         status=201,
@@ -166,8 +168,9 @@ def change_password(current_user: User):
         session.refresh(current_user)
     #   Logout all devices
     redis_client.logout_all_devices(user_id=current_user.id)
+    current_app.logger.info(f"Password changed successfully. Logout all devices.")
     return api_response(
-        message="Password changed successfully.",
+        message="Password changed successfully. Logout all devices.",
         status=200,
     )
 

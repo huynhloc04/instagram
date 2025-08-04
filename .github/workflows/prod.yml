@@ -90,12 +90,12 @@ jobs:
               sudo chown -R "${{ secrets.GENERAL_USER }}":"${{ secrets.GENERAL_USER }}" /opt/instagram/
             else
               cd /opt/instagram/
-              if [ -f "docker-compose.yml" ]; then
+              if [ -f "docker-compose.prod.yml" ]; then
                 echo "Stopping existing services..."
-                docker compose -f ./docker-compose.yml -f ./docker-compose.prod.yml down --remove-orphans
+                docker compose -f ./docker-compose.prod.yml down --remove-orphans
               fi
               echo "Cleaning directory..."
-              rm -f docker-compose.yml docker-compose.prod.yml
+              rm -f docker-compose.prod.yml
               docker image prune -af
             fi
 
@@ -106,7 +106,7 @@ jobs:
           username: ${{secrets.GENERAL_USER}}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
-          source: "docker-compose.yml,docker-compose.prod.yml"
+          source: "docker-compose.prod.yml"
           target: "/opt/instagram/"
 
       - name: Deploy Application
@@ -118,11 +118,11 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
             cd /opt/instagram/
-            chmod 600 docker-compose.yml docker-compose.prod.yml
+            chmod 600 docker-compose.prod.yml
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
             export DOCKER_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/instagram:sha-${{ github.sha }}
-            docker compose -f ./docker-compose.yml -f ./docker-compose.prod.yml pull
-            docker compose -f ./docker-compose.yml -f ./docker-compose.prod.yml up -d
+            docker compose -f ./docker-compose.prod.yml pull
+            docker compose -f ./docker-compose.prod.yml up -d
 
       - name: Verify Deployment
         uses: appleboy/ssh-action@v1.2.0
