@@ -54,8 +54,8 @@ def create_app():
     # Setup JWT
     @jwt.token_in_blocklist_loader
     def token_in_blocklist_callback(jwt_header, jwt_data):
-        jti = jwt_data["jti"]
-        return redis_client.is_blacklisted(jti)
+        jit_token = jwt_data["jit"]
+        return redis_client.is_blacklisted(jit_token)
 
     # @jwt.user_lookup_loader
     # def user_lookup_callback(jwt_header, jwt_data):
