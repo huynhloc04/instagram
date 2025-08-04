@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, field_validator
 from werkzeug.exceptions import BadRequest
 
 from app.v1.models.follow import Follow
@@ -17,7 +17,7 @@ class UserCreate(BaseModel):
     bio: str | None = None
     profile_picture: str | None = None
 
-    @validator("password")
+    @field_validator("password")
     def validate_password(cls, value: str) -> str:
         if len(value) < 8:
             raise BadRequest("Password must be at least 8 characters long")

@@ -30,12 +30,12 @@ locust = "^2.37.10"
 snakeviz = "^2.2.2"
 flask-limiter = "^3.12"
 redis = "^3.0"
+debugpy = "^1.8.15"
 
 [tool.poetry.scripts]
 app = 'app.main:main'
 
 [tool.poetry.group.dev.dependencies]
-debugpy = "^1.8.14"
 
 [build-system]
 requires = ["poetry-core"]

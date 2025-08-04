@@ -1,15 +1,15 @@
 #   References: https://medium.com/@albertazzir/blazing-fast-python-docker-builds-with-poetry-a78a66f5aed0
 
-ARG PYTHON_VERSION=3.11-alpine  
+ARG PYTHON_VERSION=3.11.9-alpine3.19
 ARG VIRTUAL_ENV=/instagram/.venv
 
 # ---------- Build Stage ----------
 FROM python:${PYTHON_VERSION} AS builder
 
-# Install system dependencies required to build docker-compose -f docker-compose.yml -f docker-compose.debug.yml up --buildPython wheels
-RUN apk add --no-cache build-base libffi-dev openssl-dev
+ARG VIRTUAL_ENV
 
-RUN pip install --no-cache-dir poetry==1.4.2
+RUN apk add --no-cache build-base libffi-dev openssl-dev && \
+    pip install --no-cache-dir poetry==1.4.2
 
 ENV POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \
@@ -40,4 +40,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "1", "app.main:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "app.main:app"]

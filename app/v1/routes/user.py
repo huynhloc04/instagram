@@ -2,6 +2,7 @@ from flask import Blueprint, current_app, request
 from pydantic import ValidationError
 from werkzeug.exceptions import BadRequest, NotFound, Conflict, InternalServerError
 from flask_limiter.util import get_remote_address
+from flask_jwt_extended import jwt_required
 
 from app.core.extensions import limiter
 from app.v1.utils import user_id_from_token_key
@@ -12,8 +13,8 @@ from app.v1.schemas.base import Pagination
 from app.v1.schemas.user import UserEdit, UserRead, UserReadList
 from app.v1.schemas.post import PostReadList, PostRead
 from app.v1.schemas.follow import FollowUser
-from app.v1.controllers.user import check_user_edit
-from app.v1.controllers.follow import create_follow_user
+from app.v1.services.user import check_user_edit
+from app.v1.services.follow import create_follow_user
 
 userRoute = Blueprint("users", __name__, url_prefix="/users")
 
@@ -169,8 +170,8 @@ def unfollow_user(user_id: int, current_user: User):
 
 
 @userRoute.route("/<int:user_id>/followers", methods=["GET"])
-@token_required
-def get_follower(user_id: int, current_user: User):
+@jwt_required
+def get_follower(user_id: int):
     """Get all users who follow the user {user_id}"""
 
     with db_session() as session:

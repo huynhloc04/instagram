@@ -1,28 +1,36 @@
-version: '3.9'
 
 services:
   app:
     container_name: app_dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
     ports:
       - 8000:8000
       - 5678:5678
     environment:
       - FLASK_APP=app.main
-      - FLASK_ENV=development
-      - FLASK_APP=app.main
       - FLASK_DEBUG=1
+      - GOOGLE_APPLICATION_CREDENTIALS=/instagram/credential.json
+    volumes:
+      - .:/instagram
+      - ~/.config/gcloud:/root/.config/gcloud:ro
+      # Exclude virtual environment and cache files
+      - /instagram/.venv
     entrypoint: [
       "python", "-m", "debugpy",
       "--listen", "0.0.0.0:5678",
-      "--wait-for-client",
+      # "--wait-for-client",
       "-m", "flask", "run",
       "--host=0.0.0.0",
       "--port=8000"
     ]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/public"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
       retries: 3
   
   mysql:
@@ -31,12 +39,13 @@ services:
     ports:
       - 3306:3306
     env_file: 
-      - ".env"
+      - .env
     environment:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_HOST: ${MYSQL_HOST}
     volumes:
       - mysql_data:/var/lib/mysql
 

@@ -2,23 +2,23 @@ from pydantic import ValidationError
 from flask import Blueprint, current_app, request
 from werkzeug.exceptions import BadRequest, NotFound, Conflict, Forbidden
 from flask_limiter.util import get_remote_address
+from flask_jwt_extended import jwt_required
 
 from app.core.extensions import limiter
 from app.core.database import db_session
-from app.v1.models import Post, User, Like, ImageCron, Comment
+from app.v1.models import Post, User, Like, ImageCron, Comment, PostTag, Tag
 from app.v1.schemas.base import Pagination
 from app.v1.schemas.post import PostCreate, PostEdit, PostReadList
 from app.v1.schemas.comment import CommentReadList, CommentTree
-from app.v1.controllers.post import create_post, update_post
-from app.v1.controllers.tag import create_tags
+from app.v1.services.post import create_post, update_post
+from app.v1.services.tag import create_tags
 from app.v1.enums import PostStatus, ImageCronEnum
-from app.v1.storage import gcs_upload
-from app.v1.controllers.comment import get_base_comment_and_count
+from app.v1.storage import _generate_put_singed_url, _generate_get_singed_url
+from app.v1.services.comment import get_base_comment_and_count
 from app.v1.utils import user_id_from_token_key
 from app.v1.utils import (
     api_response,
     token_required,
-    validate_upload_file,
 )
 
 
@@ -83,33 +83,57 @@ def view_news_feed(current_user: User):
         )
 
 
-@postRoute.route("/upload", methods=["POST"])
+@postRoute.route("/sign-url", methods=["POST"])
 @token_required
-@limiter.limit(
-    "10/hour",
-    key_func=user_id_from_token_key,
-    error_message="Too many upload media attempts. Please try again later.",
-)
-def upload_media(current_user: User):
+def get_signed_url(current_user: User):
     #   1. Validate also prepare data
-    uploaded_image = validate_upload_file(request=request)
-    image_name = gcs_upload(file_obj=uploaded_image)
-    #   2. Upload directly to Google Cloud Storage (GCS).
-    current_app.logger.info("Upload media successfully.")
+    filename = request.form.get("filename", "default.png", type=str)
+    expiration = request.form.get("expiration", 60, type=int)
 
+    #   2. Get presigned url information
+    presigned_dict = _generate_put_singed_url(filename=filename, expiration=expiration)
+
+    return api_response(
+        message="Get signed url successfully.",
+        data=presigned_dict,
+        status=201,
+    )
+
+
+@postRoute.route("/save-image", methods=["POST"])
+@token_required
+def save_image(current_user: User):
+    #   1. Validate also prepare data
+    filename = request.form.get("filename", "default.png", type=str)
+    if not filename:
+        raise BadRequest("Filename is required.")
+
+    #   2. Save image to database
     with db_session() as session:
         image = ImageCron(
-            image_name=image_name,
+            image_name=filename,
             status=ImageCronEnum.unused.value,
         )
         session.add(image)
         session.commit()
 
         return api_response(
-            message="Upload media successfully.",
-            data={"image_id": image.id},
+            message="Save image successfully.",
             status=201,
+            data={"image_id": image.id},
         )
+
+
+@postRoute.route("/get-image", methods=["GET"])
+@token_required
+def get_image(current_user: User):
+    image_id = request.form.get("image_id", type=int)
+    with db_session() as session:
+        image = session.query(ImageCron).filter(ImageCron.id == image_id).first()
+        if not image:
+            raise NotFound("Image not found.")
+    singed_url = _generate_get_singed_url(filename=image.image_name)
+    return api_response(message="Get image successfully.", status=200, data=singed_url)
 
 
 @postRoute.route("/draft", methods=["POST"])
@@ -495,3 +519,49 @@ def delete_comment_from_post(post_id: int, comment_id: int, current_user: User):
         session.commit()
         current_app.logger.info(f"Delete comment {comment_id} successfully.")
         return api_response(message="Delete comment successfully.")
+
+
+@postRoute.route("/search", methods=["GET"])
+@token_required
+@limiter.limit(
+    "10/minute",
+    key_func=user_id_from_token_key,
+    error_message="Too many search post attempts. Please try again later.",
+)
+def search_post(current_user: User):
+    tag = request.args.get("tag", "", type=str)
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
+    with db_session() as session:
+        posts = (
+            session.query(Post)
+            .join(PostTag, Post.id == PostTag.post_id)
+            .join(Tag, Tag.id == PostTag.tag_id)
+            .filter(Tag.tag_name == tag)
+            .order_by(Post.created_at.desc())
+            .paginate(page=page, per_page=per_page)
+        )
+
+        posts_by_tag = PostReadList(
+            posts=[
+                post.to_dict(
+                    current_user=current_user,
+                    include_user=True,
+                    include_like=True,
+                    include_comment=True,
+                )
+                for post in posts
+            ],
+            pagination=Pagination(
+                total=posts.total,
+                page=posts.page,
+                per_page=posts.per_page,
+                pages=posts.pages,
+            ),
+        )
+        current_app.logger.info(f"Search post by tag {tag} successfully.")
+        return api_response(
+            data=posts_by_tag.model_dump(),
+            message=f"Search post by tag {tag} successfully.",
+            status=200,
+        )

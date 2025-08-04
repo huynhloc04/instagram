@@ -1,46 +1,31 @@
-import os
-
-from flask import Flask, Blueprint
+from flask import Flask, Blueprint, jsonify
 from dotenv import load_dotenv
-from werkzeug.exceptions import NotFound
 from prometheus_client import make_wsgi_app, REGISTRY
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.core.config import settings
+from app.core.extensions import limiter
 from app.core.handlers import register_error_handlers
-from app.core.extensions import register_extensions
+from app.core.extensions import register_extensions, jwt
 from app.v1.routes.auth import authRoute
 from app.v1.routes.user import userRoute
 from app.v1.routes.post import postRoute
 from app.logs.config import init_logging
-from app.v1.storage import bucket
-from app.v1.utils import api_response, register_dependencies
+from app.v1.utils import register_dependencies
 from app.v1.schedulers import scheduler_delete_image
+from app.core.redis_client import redis_client
 
 
 load_dotenv()
 scheduler = BackgroundScheduler()
-
 rootRoute = Blueprint("root", __name__, url_prefix="/api/v1")
 
 
-@rootRoute.route("/public", methods=["GET"])
+@rootRoute.route("/health", methods=["GET"])
+@limiter.exempt
 def index():
-    return api_response(message="This is a public route.")
-
-
-@rootRoute.route("/<string:image_name>", methods=["GET"])
-def serve_image(image_name: str):
-    try:
-        gcs_filename = os.path.join(settings.BUCKET_FOLDER, image_name)
-        blob = bucket.blob(gcs_filename)
-        if not blob.exists():
-            NotFound(404, description="File not found.")
-
-        return blob.public_url
-    except Exception as error:
-        raise IndentationError(str(error))
+    return jsonify({"status": "healthy"}), 200
 
 
 def create_app():
@@ -65,6 +50,18 @@ def create_app():
 
     #   Setup logging
     init_logging(app)
+
+    # Setup JWT
+    @jwt.token_in_blocklist_loader
+    def token_in_blocklist_callback(jwt_header, jwt_data):
+        jit = jwt_data["jit"]
+        identity = jwt_data["sub"]
+        iat = jwt_data["iat"]
+        if redis_client.is_blacklisted(jit) or redis_client.is_logout_all_devices(
+            identity, iat
+        ):
+            return True
+        return False
 
     register_dependencies(app)
     app.wsgi_app = DispatcherMiddleware(

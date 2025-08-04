@@ -8,13 +8,11 @@ from datetime import datetime
 
 from flask import jsonify, request, g
 from functools import wraps
-from google.cloud import storage
-from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity, get_jwt
 from flask_limiter.util import get_remote_address
 from werkzeug.exceptions import NotFound, Unauthorized, BadRequest
 
 from app.v1.models import User
-from app.core.config import settings
 from app.logs.config import REQUEST_COUNT, REQUEST_LATENCY
 
 
@@ -91,16 +89,6 @@ def find_file(filename: str, start_dir: Path = Path.cwd()) -> Path | None:
     for path in start_dir.rglob(filename):
         return path.resolve()
     return None or ""
-
-
-def get_gcs_client():
-    if settings.GCS_KEY:
-        filepath = find_file(filename=settings.GCS_KEY)
-        if os.path.isfile(filepath):
-            client = storage.Client.from_service_account_json(filepath)
-    else:
-        client = storage.Client()
-    return client
 
 
 def register_dependencies(app):

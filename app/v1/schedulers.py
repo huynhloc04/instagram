@@ -4,7 +4,7 @@ from sqlalchemy import delete
 from app.core.config import settings
 from app.v1.models import ImageCron
 from app.v1.enums import ImageCronEnum
-from app.v1.storage import gcs_delete
+from app.v1.storage import _storage_delete
 from app.core.database import db_session
 
 
@@ -29,7 +29,7 @@ def scheduler_delete_image(app):
             #   Delete on the Google Cloud Storage
             for image_name in image_names:
                 gcs_filename = os.path.join(settings.BUCKET_FOLDER, image_name[0])
-                gcs_delete(gcs_filename)
+                _storage_delete(gcs_filename)
                 deleted_image_names.append(image_name[0])
 
             #   Delete in Database (Only delete images that have been successfully deleted on GCS)

@@ -1,20 +1,5 @@
-version: '3.9'
 
 services:
-  app:
-    build: .
-    ports:
-      - 8000:8000
-    env_file:
-      - .env
-    environment:
-      - FLASK_APP=app.main
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/public"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   redis:
     image: redis:latest
@@ -24,6 +9,11 @@ services:
     volumes:
       - redis_data:/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   redis_data:
