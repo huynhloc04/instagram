@@ -8,9 +8,9 @@ from datetime import datetime
 
 from flask import jsonify, request, g
 from functools import wraps
-from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity, get_jwt
+from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 from flask_limiter.util import get_remote_address
-from werkzeug.exceptions import NotFound, Unauthorized, BadRequest
+from werkzeug.exceptions import Unauthorized, BadRequest, Forbidden
 
 from app.v1.models import User
 from app.logs.config import REQUEST_COUNT, REQUEST_LATENCY
@@ -28,23 +28,22 @@ def api_response(data=None, message=None, status=200):
     return jsonify(response), status
 
 
-def token_required(func):
-    """Create decorator for API authentication using JWT"""
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            verify_jwt_in_request()
-            user_id = get_jwt_identity()
-        except Exception as error:
-            return Unauthorized(f"Token is invalid: {str(error)}")
-        current_user = User.query.filter_by(id=int(user_id)).first()
-        if not current_user:
-            return NotFound(f"User {current_user.username} not found!")
-
-        return func(current_user=current_user, *args, **kwargs)
-
-    return wrapper
+def token_required(require_account_verified: bool = False):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                verify_jwt_in_request()
+                user_id = get_jwt_identity()
+            except Exception as error:
+                return Unauthorized(f"Token is invalid: {str(error)}")
+            user = User.query.filter_by(id=int(user_id)).first()
+            if require_account_verified and not user.is_verified:
+                raise Forbidden("You must verify your account to access this resource.")
+            kwargs["current_user"] = user
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def user_or_ip_key():

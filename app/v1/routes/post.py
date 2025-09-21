@@ -1,20 +1,15 @@
 from pydantic import ValidationError
 from flask import Blueprint, current_app, request
 from werkzeug.exceptions import BadRequest, NotFound, Conflict, Forbidden
-from flask_limiter.util import get_remote_address
-from flask_jwt_extended import jwt_required
 
 from app.core.extensions import limiter
 from app.core.database import db_session
 from app.v1.models import Post, User, Like, ImageCron, Comment, PostTag, Tag
 from app.v1.schemas.base import Pagination
-from app.v1.schemas.post import PostCreate, PostEdit, PostReadList
-from app.v1.schemas.comment import CommentReadList, CommentTree
-from app.v1.services.post import create_post, update_post
-from app.v1.services.tag import create_tags
+from app.v1.schemas.post import PostCreate, PostEdit, PostReadList, CommentReadList, CommentTree
+from app.v1.services.post import create_post, update_post, get_base_comment_and_count, create_tags
 from app.v1.enums import PostStatus, ImageCronEnum
 from app.v1.storage import _generate_put_singed_url, _generate_get_singed_url
-from app.v1.services.comment import get_base_comment_and_count
 from app.v1.utils import user_id_from_token_key
 from app.v1.utils import (
     api_response,
@@ -26,7 +21,7 @@ postRoute = Blueprint("posts", __name__, url_prefix="/posts")
 
 
 @postRoute.route("/<int:post_id>", methods=["GET"])
-@token_required
+@token_required()
 def get_post(post_id: int, current_user: User):
     with db_session() as session:
         post = Post.query.get(post_id)
@@ -47,7 +42,7 @@ def get_post(post_id: int, current_user: User):
 
 
 @postRoute.route("/news-feed", methods=["GET"])
-@token_required
+@token_required()
 def view_news_feed(current_user: User):
 
     # Get pagination parameters from query string
@@ -84,7 +79,7 @@ def view_news_feed(current_user: User):
 
 
 @postRoute.route("/sign-url", methods=["POST"])
-@token_required
+@token_required()
 def get_signed_url(current_user: User):
     #   1. Validate also prepare data
     filename = request.form.get("filename", "default.png", type=str)
@@ -101,7 +96,7 @@ def get_signed_url(current_user: User):
 
 
 @postRoute.route("/save-image", methods=["POST"])
-@token_required
+@token_required()
 def save_image(current_user: User):
     #   1. Validate also prepare data
     filename = request.form.get("filename", "default.png", type=str)
@@ -125,7 +120,7 @@ def save_image(current_user: User):
 
 
 @postRoute.route("/get-image", methods=["GET"])
-@token_required
+@token_required()
 def get_image(current_user: User):
     image_id = request.form.get("image_id", type=int)
     with db_session() as session:
@@ -137,7 +132,7 @@ def get_image(current_user: User):
 
 
 @postRoute.route("/draft", methods=["POST"])
-@token_required
+@token_required()
 @limiter.limit(
     "10/hour",
     key_func=user_id_from_token_key,
@@ -187,7 +182,7 @@ def create_draft_post(current_user: User):
 
 
 @postRoute.route("/", methods=["POST"])
-@token_required
+@token_required()
 @limiter.limit(
     "10/hour",
     key_func=user_id_from_token_key,
@@ -233,7 +228,7 @@ def create_post_public(current_user: User):
 
 
 @postRoute.route("/<int:post_id>", methods=["PUT"])
-@token_required
+@token_required()
 @limiter.limit(
     "10/hour",
     key_func=user_id_from_token_key,
@@ -289,7 +284,7 @@ def update_post_public(post_id: int, current_user: User):
 
 
 @postRoute.route("/<int:post_id>", methods=["DELETE"])
-@token_required
+@token_required()
 @limiter.limit(
     "10/hour",
     key_func=user_id_from_token_key,
@@ -314,7 +309,7 @@ def delete_post(post_id: int, current_user: User):
 
 
 @postRoute.route("/<int:post_id>/likes", methods=["POST"])
-@token_required
+@token_required()
 @limiter.limit(
     "60/minute",
     key_func=user_id_from_token_key,
@@ -340,7 +335,7 @@ def like_post(post_id: int, current_user: User):
 
 
 @postRoute.route("/<int:post_id>/unlikes", methods=["POST"])
-@token_required
+@token_required()
 @limiter.limit(
     "60/minute",
     key_func=user_id_from_token_key,
@@ -364,7 +359,7 @@ def unlike_post(post_id: int, current_user: User):
 
 
 @postRoute.route("/<int:post_id>/comments", methods=["GET"])
-@token_required
+@token_required()
 def list_base_comments(post_id: int, current_user: User):
 
     page = request.args.get("page", 1, type=int)
@@ -384,7 +379,7 @@ def list_base_comments(post_id: int, current_user: User):
 
 
 @postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["GET"])
-@token_required
+@token_required()
 def list_child_comments(post_id: int, comment_id: int, current_user: User):
 
     page = request.args.get("page", 1, type=int)
@@ -429,7 +424,7 @@ def list_child_comments(post_id: int, comment_id: int, current_user: User):
 
 @postRoute.route("/<int:post_id>/comments", methods=["POST"])
 @postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["POST"])
-@token_required
+@token_required()
 @limiter.limit(
     "30/hour",
     key_func=user_id_from_token_key,
@@ -465,7 +460,7 @@ def comment_on_post(post_id: int, current_user: User, comment_id: int = None):
 
 
 @postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["PUT"])
-@token_required
+@token_required()
 @limiter.limit(
     "30/hour",
     key_func=user_id_from_token_key,
@@ -497,7 +492,7 @@ def update_comment(post_id: int, current_user: User, comment_id: int = None):
 
 
 @postRoute.route("/<int:post_id>/comments/<int:comment_id>", methods=["DELETE"])
-@token_required
+@token_required()
 @limiter.limit(
     "30/hour",
     key_func=user_id_from_token_key,
@@ -522,7 +517,7 @@ def delete_comment_from_post(post_id: int, comment_id: int, current_user: User):
 
 
 @postRoute.route("/search", methods=["GET"])
-@token_required
+@token_required()
 @limiter.limit(
     "10/minute",
     key_func=user_id_from_token_key,

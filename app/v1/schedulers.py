@@ -1,12 +1,14 @@
 import os
 from sqlalchemy import delete
 
-from app.core.config import settings
+from app.core.config import get_settings
 from app.v1.models import ImageCron
 from app.v1.enums import ImageCronEnum
 from app.v1.storage import _storage_delete
 from app.core.database import db_session
 
+
+settings = get_settings()
 
 def scheduler_delete_image(app):
     """

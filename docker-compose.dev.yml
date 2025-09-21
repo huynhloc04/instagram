@@ -13,7 +13,6 @@ services:
     environment:
       - FLASK_APP=app.main
       - FLASK_DEBUG=1
-      - GOOGLE_APPLICATION_CREDENTIALS=/instagram/credential.json
     volumes:
       - .:/instagram
       - ~/.config/gcloud:/root/.config/gcloud:ro
@@ -49,5 +48,52 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery
+    command: celery -A app.celery_worker.celery worker --loglevel=info -c 4
+    env_file: 
+      - .env
+    volumes:
+      - .:/instagram
+      # Exclude virtual environment and cache files
+      - /instagram/.venv
+    depends_on:
+      - redis
+
+  celery_dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flower
+    command: celery -A app.celery_worker.celery flower --port=5555
+    ports:
+      - 5557:5555
+    env_file: 
+      - .env
+    volumes:
+      - .:/instagram
+      # Exclude virtual environment and cache files  
+      - /instagram/.venv
+    depends_on:
+      - celery_worker
+
 volumes:
   mysql_data:
+  redis_data:

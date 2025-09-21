@@ -55,3 +55,25 @@ class PostEdit(BaseModel):
     caption: str | None = None
     image_name: str | None = None
     status: str | None = None
+
+
+class CommentTree(BaseModel):
+    id: int
+    created_at: datetime
+    modified_at: datetime
+    user_id: int
+    post_id: int
+    content: str
+    parent_comment_id: int | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class CommentReadList(BaseModel):
+    comment_tree: list[CommentTree]
+    pagination: Pagination
+
+
+class FollowUser(BaseModel):
+    follower_id: int
+    following_id: int

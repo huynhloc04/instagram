@@ -9,9 +9,10 @@ from werkzeug.utils import secure_filename
 from werkzeug.exceptions import NotFound, InternalServerError
 from google.cloud import storage
 
-from app.core.config import settings
+from app.core.config import get_settings
 
 
+settings = get_settings()
 client = storage.Client(project=settings.GOOGLE_CLOUD_PROJECT)
 bucket = client.bucket(settings.BUCKET_NAME)
 
