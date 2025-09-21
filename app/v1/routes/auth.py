@@ -1,8 +1,9 @@
 # Reference: https://github.com/jod35/JWT-Auth-for-Flask
 
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
+from werkzeug.exceptions import Unauthorized, BadRequest, Conflict
 from flask import Blueprint, request, current_app
 from flask_limiter.util import get_remote_address
 from flask_jwt_extended import (
@@ -15,19 +16,24 @@ from flask_jwt_extended import (
 
 from app.core.extensions import limiter
 from app.core.database import db_session
-from app.core.config import settings
+from app.core.config import get_settings
 from app.v1.utils import api_response
 from app.v1.schemas.user import UserCreate, UserRead, UserLoginResponse
 from app.v1.services.user import create_user
 from app.v1.services.auth import _check_user_register, _check_user_login
 from app.v1.utils import user_or_ip_key
-from app.core.redis_client import redis_client
+from app.core.redis import redis_client
 from app.v1.utils import token_required
 from app.v1.models.user import User
-from werkzeug.exceptions import Unauthorized
+from app.v1.services.email import (
+    send_verification_email, 
+    confirm_verification_token,
+    send_account_activation_confirmation_email
+)
 
 
 authRoute = Blueprint("auth", __name__, url_prefix="/auth")
+settings = get_settings()
 
 
 @authRoute.route("/register", methods=["POST"])
@@ -50,14 +56,42 @@ def register():
 
     #   3. Deserialize User DB model to JSON response, convert from ORM-object to Pydantic object
     registerd_user = UserRead.model_validate(created_user)
+
+    #   4. Send account verification email
+    send_verification_email(user=created_user)
+
     current_app.logger.info(
         f"User registered with username: {created_user.username} successfully."
     )
     return api_response(
         data=registerd_user.model_dump(),  #   Also can be used as registerd_user.json()
-        message="User registered successfully.",
+        message="User registered successfully. Please check your email for account verification.",
         status=201,
     )
+
+
+@authRoute.route("/verify/<token>")
+def verify_account(token: str):
+    """
+    Verify user's account via sent token. 
+    """
+    email = confirm_verification_token(token=token)
+    if not email:
+        raise BadRequest("Invalid or expiried verification token.")
+    with db_session() as session:
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            raise BadRequest("User not found.")
+        if user.is_verified:
+            raise Conflict("Account is already verified.")
+        
+        user.is_verified = True
+        user.verified_at = int(datetime.now().timestamp()),
+        session.commit()
+        # Send verification email confirmation
+        send_account_activation_confirmation_email(user)
+
+    return api_response(message="Your account has been verified successfully!", status=200)
 
 
 @authRoute.route("/login", methods=["POST"])
@@ -139,7 +173,7 @@ def refresh():
 
 
 @authRoute.route("/verify-password", methods=["POST"])
-@token_required
+@token_required()
 def verify_password(current_user: User):
     """
     Verify old password
@@ -156,7 +190,7 @@ def verify_password(current_user: User):
 
 
 @authRoute.route("/change-password", methods=["PUT"])
-@token_required
+@token_required(require_account_verified=True)
 def change_password(current_user: User):
     """
     Change user password
@@ -202,7 +236,7 @@ def logout():
 
 
 @authRoute.route("/logout-all", methods=["POST"])
-@token_required
+@token_required()
 def logout_all_devices(current_user: User):
     """
     Logout user from all devices

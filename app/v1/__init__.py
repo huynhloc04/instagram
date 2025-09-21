@@ -1,23 +1,26 @@
-from flask import Flask, Blueprint, jsonify
+import os
 from dotenv import load_dotenv
+
+from flask import Flask, Blueprint, jsonify
 from prometheus_client import make_wsgi_app, REGISTRY
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from app.core.config import settings
+from app.core.config import get_settings
 from app.core.extensions import limiter
 from app.core.handlers import register_error_handlers
 from app.core.extensions import register_extensions, jwt
+from app.core.redis import redis_client
+from app.core.celery import init_celery
 from app.v1.routes.auth import authRoute
 from app.v1.routes.user import userRoute
 from app.v1.routes.post import postRoute
 from app.logs.config import init_logging
 from app.v1.utils import register_dependencies
 from app.v1.schedulers import scheduler_delete_image
-from app.core.redis_client import redis_client
-
 
 load_dotenv()
+settings = get_settings()
 scheduler = BackgroundScheduler()
 rootRoute = Blueprint("root", __name__, url_prefix="/api/v1")
 
@@ -29,11 +32,13 @@ def index():
 
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, template_folder=settings.TEMPLATE_FOLDER, static_url_path="/static")
 
     app.config["SECRET_KEY"] = settings.SECRET_KEY
     app.config["SQLALCHEMY_DATABASE_URI"] = settings.db_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["PREFERRED_URL_SCHEME"] = settings.PREFERRED_URL_SCHEME
+    app.config["SERVER_NAME"] = settings.SERVER_NAME
     # app.config.from_mapping(settings.dict())
 
     #   Register extensions

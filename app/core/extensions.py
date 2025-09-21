@@ -6,7 +6,10 @@ from flasgger import Swagger
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-from app.core.config import settings
+from app.core.config import get_settings
+
+
+settings = get_settings()
 
 db = SQLAlchemy()
 jwt = JWTManager()

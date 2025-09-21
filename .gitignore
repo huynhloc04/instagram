@@ -14,10 +14,10 @@ __pycache__/
 cprofile/
 
 # Application
-app/static/
 certbot/
 
 # Credentials and Keys
 .env
 credential.json
 .secrets
+

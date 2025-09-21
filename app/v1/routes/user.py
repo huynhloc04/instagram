@@ -11,16 +11,15 @@ from app.v1.utils import api_response, token_required, cprofile
 from app.v1.models import User, Post, Follow
 from app.v1.schemas.base import Pagination
 from app.v1.schemas.user import UserEdit, UserRead, UserReadList
-from app.v1.schemas.post import PostReadList, PostRead
-from app.v1.schemas.follow import FollowUser
+from app.v1.schemas.post import PostReadList, PostRead, FollowUser
 from app.v1.services.user import check_user_edit
-from app.v1.services.follow import create_follow_user
+from app.v1.services.post import create_follow_user
 
 userRoute = Blueprint("users", __name__, url_prefix="/users")
 
 
 @userRoute.route("/me", methods=["GET"])
-@token_required
+@token_required()
 @cprofile
 def view_profile(current_user: User):
     try:
@@ -38,7 +37,7 @@ def view_profile(current_user: User):
 
 
 @userRoute.route("/me", methods=["PUT"])
-@token_required
+@token_required()
 def edit_profile(current_user: User):
 
     with db_session() as session:
@@ -71,7 +70,7 @@ def edit_profile(current_user: User):
 
 
 @userRoute.route("/<int:user_id>/profile", methods=["GET"])
-@token_required
+@token_required()
 def view_other_profile(user_id: int, current_user: User):
     user = User.query.get(user_id)
     if not user:
@@ -81,7 +80,7 @@ def view_other_profile(user_id: int, current_user: User):
 
 
 @userRoute.route("/<int:user_id>/posts", methods=["GET"])
-@token_required
+@token_required()
 def get_list_post(user_id: int, current_user: User):
     with db_session() as session:
         # Get pagination parameters from query string
@@ -113,7 +112,7 @@ def get_list_post(user_id: int, current_user: User):
 
 
 @userRoute.route("/<int:user_id>/follow", methods=["POST"])
-@token_required
+@token_required()
 @limiter.limit(
     "20/hour",
     key_func=user_id_from_token_key,
@@ -143,7 +142,7 @@ def follow_user(user_id: int, current_user: User):
 
 
 @userRoute.route("/<int:user_id>/unfollow", methods=["DELETE"])
-@token_required
+@token_required()
 @limiter.limit(
     "20/hour",
     key_func=user_id_from_token_key,
@@ -212,7 +211,7 @@ def get_follower(user_id: int):
 
 
 @userRoute.route("/<int:user_id>/followings", methods=["GET"])
-@token_required
+@token_required()
 def get_following(user_id: int, current_user: User):
     """Get all users who the user {user_id} followed"""
 
@@ -253,7 +252,7 @@ def get_following(user_id: int, current_user: User):
 
 
 @userRoute.route("/search", methods=["GET"])
-@token_required
+@token_required()
 @limiter.limit(
     "30/minute",
     key_func=user_id_from_token_key,

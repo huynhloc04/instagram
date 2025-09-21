@@ -14,6 +14,8 @@ class User(BaseModel):
     password_hash = db.Column(db.String(255), nullable=False)
     fullname = db.Column(db.String(100))
     bio = db.Column(db.Text)
+    is_verified = db.Column(db.Boolean, default=False, nullable=False)
+    verified_at = db.Column(db.Integer, nullable=True)
     profile_picture = db.Column(db.String(255), default="default.jpg")
 
     def __repr__(self):

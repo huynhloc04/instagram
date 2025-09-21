@@ -4,6 +4,7 @@
         {
             "name": "Flask: Instagram",
             "type": "debugpy",
+            // "justMyCode": false,
             "request": "attach",
             "connect": {
                 "host": "localhost",
@@ -15,7 +16,6 @@
                     "remoteRoot": "/instagram"
                 }
             ],
-            "justMyCode": false
         }
     ]
 }
