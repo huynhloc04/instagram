@@ -9,7 +9,7 @@ settings = get_settings()
 
 class RedisClient:
     def __init__(self):
-        self.redis_client = redis.Redis(
+        self.conn = redis.Redis(
             host=settings.REDIS_HOST,
             port=settings.REDIS_PORT,
             db=settings.REDIS_DB,
@@ -20,9 +20,9 @@ class RedisClient:
         """Add a JWT token ID to the blacklist"""
         try:
             if expires_in:
-                return self.redis_client.setex(f"blacklist:{jit}", expires_in, "1")
+                return self.conn.setex(f"blacklist:{jit}", expires_in, "1")
             else:
-                return self.redis_client.set(f"blacklist:{jit}", "1")
+                return self.conn.set(f"blacklist:{jit}", "1")
         except Exception as e:
             current_app.logger.error(f"Error adding to blacklist: {e}")
             return False
@@ -30,7 +30,7 @@ class RedisClient:
     def is_blacklisted(self, jit: str) -> bool:
         """Check if a JWT token ID is blacklisted"""
         try:
-            return self.redis_client.exists(f"blacklist:{jit}")
+            return self.conn.exists(f"blacklist:{jit}")
         except Exception as e:
             current_app.logger.error(f"Error checking blacklist: {e}")
             return False
@@ -39,7 +39,7 @@ class RedisClient:
         """Add a user ID to the logout all devices list. Mark the time of logout all devices."""
         try:
             expires_in = int(settings.JWT_REFRESH_TOKEN_EXPIRES)
-            return self.redis_client.setex(
+            return self.conn.setex(
                 f"logout_all_devices:{user_id}",
                 expires_in,
                 int(datetime.now().timestamp()),
@@ -51,7 +51,7 @@ class RedisClient:
     def is_logout_all_devices(self, user_id: str, iat: int) -> bool:
         """Check if a user ID is in the logout all devices list"""
         try:
-            last_logout_all_devices = self.redis_client.get(
+            last_logout_all_devices = self.conn.get(
                 f"logout_all_devices:{user_id}"
             )
             if last_logout_all_devices and int(last_logout_all_devices) > iat:

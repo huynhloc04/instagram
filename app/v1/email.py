@@ -6,6 +6,7 @@ from email.mime.multipart import MIMEMultipart
 
 from app.core.config import get_settings
 from app.core.celery import celery
+from app.core.redis import redis_client
 
 
 settings = get_settings()
@@ -18,26 +19,21 @@ def send_mail(
     subject: str, 
     context: dict, 
     template_name: str, 
-    recipient: str
+    recipient: str,
+    idempotency_key: str
 ):
     """
-    Send an email with HTML template content.
-    
-    Args:
-        subject: Email subject line
-        context: Template context variables
-        template_name: Name of the email template (without .html extension)
-        recipient: Email recipient address
-        
-    Note: This task automatically runs within Flask app context when 
-          Celery is properly configured with the app factory.
+    Send an email with given HTML template content and context.
     """
     msg = MIMEMultipart()
     msg["From"] = settings.MAIL_USERNAME
     msg["To"] = recipient
     msg["Subject"] = subject
 
-    # TODO: Handle idempotency later => Enforced via DB or deduplication key.
+    # Handle idempotency with Idempotency Key.
+    if redis_client.conn.get(idempotency_key):
+        current_app.logger.info(f"Email already sent to {recipient} with idempotency key {idempotency_key}.")
+        return
 
     try:
         html_text = render_template(f"{template_name}.html", **context)
@@ -50,7 +46,8 @@ def send_mail(
             server.login(settings.MAIL_USERNAME, settings.MAIL_PASSWORD)
             server.sendmail(settings.MAIL_USERNAME, recipient, msg.as_string())
             
-        current_app.logger.info(f"Email sent successfully to {recipient}")
+        redis_client.conn.set(idempotency_key, "sent", ex=60*60*24)
+        current_app.logger.info(f"Email sent successfully to {recipient} with idempotency key {idempotency_key}.")
         
     except Exception as e:
         current_app.logger.error(f"Error while sending email: {e}")

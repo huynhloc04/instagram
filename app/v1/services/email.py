@@ -1,4 +1,5 @@
 import jwt
+import hashlib
 from datetime import datetime, timezone, timedelta
 
 from flask import current_app
@@ -32,6 +33,18 @@ def confirm_verification_token(token: str) -> str:
         current_app.logger.info("Invalid email verification token.")
         return None
 
+def generate_idempotency_key(recipient: str, subject: str) -> str:
+    """
+    Generate an idempotency key for an email.
+    """
+    normalized_recipient = recipient.lower().strip()
+    normalized_subject = subject.strip()
+    unique_id = f"{normalized_recipient}.{normalized_subject}"
+    # Generate SHA-256 hash
+    hash_object = hashlib.sha256(unique_id.encode("utf-8"))
+    idempotency_key = hash_object.hexdigest()
+    return idempotency_key
+
 def send_verification_email(user: User):
     """
     Send a verification email to the user.
@@ -46,11 +59,13 @@ def send_verification_email(user: User):
         "app_name": settings.APP_NAME,
     }
     subject = f"Account Verification - {settings.APP_NAME}"
+    idempotency_key = generate_idempotency_key(user.email, subject)
     send_mail.delay(
         subject=subject,
         context=data,
         template_name="account_verification",
         recipient=user.email,
+        idempotency_key=idempotency_key,
     )
 
 def send_account_activation_confirmation_email(user: User):
@@ -63,9 +78,11 @@ def send_account_activation_confirmation_email(user: User):
         "name": user.fullname,
     }
     subject = f"Welcome - {settings.APP_NAME}"
+    idempotency_key = generate_idempotency_key(user.email, subject)
     send_mail.delay(
         subject=subject,
         context=data,
         template_name="account_verification_confirm",
         recipient=user.email,
+        idempotency_key=idempotency_key,
     )
