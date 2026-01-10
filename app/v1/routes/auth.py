@@ -1,39 +1,26 @@
 # Reference: https://github.com/jod35/JWT-Auth-for-Flask
 
-import uuid
-from datetime import datetime, timedelta, timezone
+import logging
 
-from werkzeug.exceptions import Unauthorized, BadRequest, Conflict
-from flask import Blueprint, request, current_app
+from dependency_injector.wiring import inject, Provide
+from flask import Blueprint, request, make_response
 from flask_limiter.util import get_remote_address
-from flask_jwt_extended import (
-    create_access_token,
-    create_refresh_token,
-    get_jwt_identity,
-    jwt_required,
-    get_jwt,
-)
+from flask_jwt_extended import jwt_required, set_refresh_cookies
 
 from app.core.extensions import limiter
-from app.core.database import db_session
-from app.core.config import get_settings
-from app.v1.utils import api_response
-from app.v1.schemas.user import UserCreate, UserRead, UserLoginResponse
-from app.v1.services.user import create_user
-from app.v1.services.auth import _check_user_register, _check_user_login
-from app.v1.utils import user_or_ip_key
-from app.core.redis import redis_client
-from app.v1.utils import token_required
-from app.v1.models.user import User
-from app.v1.services.email import (
-    send_verification_email, 
-    confirm_verification_token,
-    send_account_activation_confirmation_email
+from app.core.container import Container
+from app.v1.utils import api_response, user_or_ip_key, token_required
+from app.v1.schemas.user import (
+    UserInput,
+    UserRead,
+    RegistrationResult,
+    UserLogin,
+    UserLoginResponse,
 )
-
+from app.v1.services import UserService
 
 authRoute = Blueprint("auth", __name__, url_prefix="/auth")
-settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 @authRoute.route("/register", methods=["POST"])
@@ -42,56 +29,59 @@ settings = get_settings()
     key_func=get_remote_address,
     error_message="Too many register attempts. Please try again later.",
 )
-def register():
-    # 1. Serialize and validate input JSON with Pydantic
-    json_data = request.get_json()
-    parsed_data = UserCreate.model_validate(json_data)
-    _check_user_register(data=parsed_data)
+@inject
+def register(user_service: UserService = Provide[Container.user_service]):
+    # Preprocess and validate request data
+    request_data = request.get_json(silent=True)
+    parsed_data = UserInput.model_validate(request_data)
 
-    #   2. Create user
-    with db_session() as session:
-        created_user = create_user(data=parsed_data, session=session)
-        session.commit()
-        session.refresh(created_user)
+    # Register new user
+    result: RegistrationResult = user_service.register(data=parsed_data)
 
-    #   3. Deserialize User DB model to JSON response, convert from ORM-object to Pydantic object
-    registerd_user = UserRead.model_validate(created_user)
+    # Validate output
+    registered_user = UserRead.model_validate(result.user)
 
-    #   4. Send account verification email
-    send_verification_email(user=created_user)
-
-    current_app.logger.info(
-        f"User registered with username: {created_user.username} successfully."
-    )
     return api_response(
-        data=registerd_user.model_dump(),  #   Also can be used as registerd_user.json()
-        message="User registered successfully. Please check your email for account verification.",
+        data=registered_user.model_dump(),
+        message=result.message,
         status=201,
     )
 
 
 @authRoute.route("/verify/<token>")
-def verify_account(token: str):
-    """
-    Verify user's account via sent token. 
-    """
-    email = confirm_verification_token(token=token)
-    if not email:
-        raise BadRequest("Invalid or expiried verification token.")
-    with db_session() as session:
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            raise BadRequest("User not found.")
-        if user.is_verified:
-            raise Conflict("Account is already verified.")
-        
-        user.is_verified = True
-        user.verified_at = int(datetime.now().timestamp()),
-        session.commit()
-        # Send verification email confirmation
-        send_account_activation_confirmation_email(user)
+@limiter.limit(
+    "100/day",
+    key_func=get_remote_address,
+    error_message="Too many register attempts. Please try again later.",
+)
+@inject
+def verify_account(
+    token: str,
+    user_service: UserService = Provide[Container.user_service],
+):
+    """Verify user's account via sent token."""
+    message = user_service.verify_account(token=token)
 
-    return api_response(message="Your account has been verified successfully!", status=200)
+    return api_response(message=message, status=200)
+
+
+@authRoute.route("/resend-verify", methods=["POST"])
+@limiter.limit(
+    "100/hours",
+    key_func=get_remote_address,
+    error_message="Too many attempts. Please try again later.",
+)
+@inject
+def resend_verify_code(
+    user_service: UserService = Provide[Container.user_service]
+):
+    request_data = request.get_json(silent=True)
+    email = request_data.get("email")
+
+    # Resend code
+    user_service.resend_code(email=email)
+
+    return api_response(message="Code re-sent.", status=201)
 
 
 @authRoute.route("/login", methods=["POST"])
@@ -100,89 +90,100 @@ def verify_account(token: str):
     key_func=user_or_ip_key,
     error_message="Too many login attempts. Please try again later.",
 )
-def login():
+@inject
+def login(
+    user_service: UserService = Provide[Container.user_service]
+):
     """
-    Login user with username and password
+    Login user with email and password
     """
     json_data = request.get_json()
-    username = json_data.get("username")
-    password = json_data.get("password")
+    validated_data = UserLogin.model_validate(json_data)
 
-    user = _check_user_login(username=username, password=password)
-    #   Generate a random JIT and just for both access and refresh token
-    token_jit = str(uuid.uuid4())
-    extra_claims = {"jit": token_jit}
-    #   Create access_token and refresh_token
-    access_token = create_access_token(
-        identity=str(user.id),
-        additional_claims=extra_claims,
-        expires_delta=timedelta(seconds=int(settings.JWT_ACCESS_TOKEN_EXPIRES)),
-    )
-    refresh_token = create_refresh_token(
-        identity=str(user.id),
-        additional_claims=extra_claims,
-        expires_delta=timedelta(seconds=int(settings.JWT_REFRESH_TOKEN_EXPIRES)),
-    )
+    access_token, refresh_token, user = user_service.login(data=validated_data)
 
-    #   Validate response
     login_user = UserLoginResponse(
         access_token=access_token,
-        refresh_token=refresh_token,
         user=UserRead.model_validate(user),
     )
-    current_app.logger.info(f"User {username} login successfully.")
-    return api_response(
-        message="Login successfully.",
-        data=login_user.model_dump(),
-        status=201,
+
+    # Never trust on client, so create token from server
+    response = make_response(
+        api_response(
+            message="Login successfully.",
+            data=login_user.model_dump(),
+            status=200,
+        )
     )
+
+    # csrf_token = token_hex(16)
+    # response.set_cookie(
+    #     'refresh_token',
+    #     refresh_token,
+    #     httponly=True,  # Prevent XSS (Important)
+    #     secure=True,    # Only through HTTPS
+    #     samesite='Lax',
+    #     max_age=int(user_service.settings.JWT_REFRESH_TOKEN_EXPIRES),
+    #     path='api/v1/auth/refresh',
+    # )
+    # response.set_cookie(
+    #     'csrf_token',
+    #     csrf_token,
+    #     secure=True,
+    #     samesite="Lax",
+    #     max_age=3600,
+    # )
+    # return response
+    
+    # Use the built-in function instead of manually as above
+    set_refresh_cookies(
+        response=response,
+        encoded_refresh_token=refresh_token,
+        max_age=int(user_service.settings.JWT_REFRESH_TOKEN_EXPIRES)
+    )
+    return response
 
 
 @authRoute.route("/refresh", methods=["POST"])
-@jwt_required(refresh=True)  #   Check if refresh token is valid
-def refresh():
-    """
-    Refresh access token
-    """
-    identity = get_jwt_identity()
-    old_token_jit = get_jwt()["jit"]
-    #   Generate a random JIT and just for both access and refresh token
-    token_jit = str(uuid.uuid4())
-    extra_claims = {"jit": token_jit}
-    access_token = create_access_token(
-        identity=identity,
-        additional_claims=extra_claims,
-        expires_delta=timedelta(seconds=int(settings.JWT_ACCESS_TOKEN_EXPIRES)),
-    )
-    refresh_token = create_refresh_token(
-        identity=identity,
-        additional_claims=extra_claims,
-        expires_delta=timedelta(seconds=int(settings.JWT_REFRESH_TOKEN_EXPIRES)),
-    )
-    #   Revoke old refresh token
-    redis_client.add_to_blacklist(
-        jit=old_token_jit,
-        expires_in=int(settings.JWT_REFRESH_TOKEN_EXPIRES),
-    )
+@jwt_required(refresh=True, locations="cookies")   # default is `headers`
+@inject
+def refresh(
+    user_service: UserService = Provide[Container.user_service]
+):
+    access_token, refresh_token = user_service.refresh()
 
-    return api_response(
-        message="Refresh access token successfully.",
-        data={"access_token": access_token, "refresh_token": refresh_token},
-        status=201,
+    response = make_response(
+        api_response(
+            message="Refresh tokens successfully.",
+            data={"access_token": access_token},
+            status=200,
+        )
     )
+    set_refresh_cookies(
+        response=response,
+        encoded_refresh_token=refresh_token,
+        max_age=int(user_service.settings.JWT_REFRESH_TOKEN_EXPIRES)
+    )
+    return response
 
 
 @authRoute.route("/verify-password", methods=["POST"])
 @token_required()
-def verify_password(current_user: User):
+@inject
+def verify_password(
+    current_user_id: int,
+    user_service: UserService = Provide[Container.user_service]
+):
     """
-    Verify old password
+        Verify old password before changing it
     """
-    password = request.form.get("password")
-    if not current_user.check_password(password):
-        current_app.logger.info(f"Incorrect password!")
-        raise Unauthorized(f"Incorrect password!")
-    current_app.logger.info(f"Password verified successfully.")
+    data = request.get_json()
+    password = data.get("password")
+
+    user_service.verify_password(
+        user_id=current_user_id, old_password=password,
+    )
+
     return api_response(
         message="Password verified successfully.",
         status=201,
@@ -190,19 +191,22 @@ def verify_password(current_user: User):
 
 
 @authRoute.route("/change-password", methods=["PUT"])
-@token_required(require_account_verified=True)
-def change_password(current_user: User):
+@token_required()
+@inject
+def change_password(
+    current_user_id: int,
+    user_service: UserService = Provide[Container.user_service]
+):
     """
-    Change user password
+        Change user password
     """
-    password = request.form.get("password")
-    with db_session() as session:
-        current_user.set_password(password)
-        session.commit()
-        session.refresh(current_user)
-    #   Logout all devices
-    redis_client.logout_all_devices(user_id=current_user.id)
-    current_app.logger.info(f"Password changed successfully. Logout all devices.")
+    data = request.get_json()
+    password = data.get("password")
+
+    user_service.changge_password(
+        user_id=current_user_id, new_password=password
+    )
+    
     return api_response(
         message="Password changed successfully. Logout all devices.",
         status=200,
@@ -211,24 +215,15 @@ def change_password(current_user: User):
 
 @authRoute.route("/logout", methods=["POST"])
 @jwt_required(verify_type=False)
-def logout():
+@inject
+def logout(
+    user_service: UserService = Provide[Container.user_service]
+):
     """
-    Logout user - blacklists both access and refresh tokens
+        Logout user - blacklists both access :     and refresh tokens
     """
-    jwt = get_jwt()
-    token_type = jwt["type"]
-    token_jit = jwt["jit"]
+    user_service.logout()
 
-    #   Blacklist both tokens in the pair
-    redis_client.add_to_blacklist(
-        jit=token_jit,
-        expires_in=(
-            int(settings.JWT_ACCESS_TOKEN_EXPIRES)
-            if token_type == "access"
-            else int(settings.JWT_REFRESH_TOKEN_EXPIRES)
-        ),
-    )
-    current_app.logger.info(f"Logout successfully.")
     return api_response(
         message=f"Logout successfully.",
         status=200,
@@ -237,11 +232,16 @@ def logout():
 
 @authRoute.route("/logout-all", methods=["POST"])
 @token_required()
-def logout_all_devices(current_user: User):
+@inject
+def logout_all_devices(
+    current_user_id: int,
+    user_service: UserService = Provide[Container.user_service]
+):
     """
-    Logout user from all devices
+        Logout user from all devices
     """
-    redis_client.logout_all_devices(user_id=current_user.id)
+    user_service.redis_client.logout_all_devices(user_id=current_user_id)
+
     return api_response(
         message="Logged out from all devices successfully.",
         status=201,

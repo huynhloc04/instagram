@@ -1,27 +1,33 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from sqlalchemy import DateTime
+from sqlalchemy import Integer
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase
 
-from app.core.extensions import db
+
+class Base(DeclarativeBase):
+    pass
 
 
-class TimeMixin(db.Model):
-    __abstract__ = True
-
-    created_at = db.Column(
-        "created_at",
-        db.Integer,
-        default=lambda: int(datetime.now().timestamp()),
-        nullable=False,
-    )
-    modified_at = db.Column(
-        "modified_at",
-        db.Integer,
-        default=lambda: int(datetime.now().timestamp()),
-        onupdate=lambda: int(datetime.now().timestamp()),
+class TimestampMixin:
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
 
+    modified_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
 
-class BaseModel(TimeMixin):
+
+class BaseModel(Base, TimestampMixin):
     __abstract__ = True
 
-    id = db.Column(db.Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+    )

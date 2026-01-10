@@ -6,7 +6,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
 
-    model_config = SettingsConfigDict(env_file=Path(".env"), case_sensitive=True)
+    model_config = SettingsConfigDict(
+        env_file=Path(".env"), case_sensitive=True
+    )
 
     SECRET_KEY: str
     APP_NAME: str
@@ -28,7 +30,8 @@ class Settings(BaseSettings):
 
     JWT_ACCESS_TOKEN_EXPIRES: str
     JWT_REFRESH_TOKEN_EXPIRES: str
-
+    JWT_REFRESH_COOKIE_NAME: str
+    JWT_COOKIE_CSRF_PROTECT: bool
 
     RATELIMIT_STORAGE_URL: str
     REDIS_HOST: str = "localhost"
@@ -46,12 +49,19 @@ class Settings(BaseSettings):
 
     FRONTEND_HOST: str
 
+    CORS_ORIGINS: str
+    CORS_METHODS: str
+    CORS_HEADERS: str
+    CORS_SUPPORTS_CREDENTIALS: bool
+
     @property
     def db_url(self) -> str:
-        return f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}"
+        """Build MySQL database connection URL"""
+        return (
+            f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}"
+            f"@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}"
+        )
 
 
-@lru_cache
 def get_settings() -> Settings:
     return Settings()
-
