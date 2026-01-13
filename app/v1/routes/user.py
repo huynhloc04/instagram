@@ -1,13 +1,11 @@
 from flask import Blueprint, current_app, request
 from pydantic import ValidationError
-from werkzeug.exceptions import BadRequest, NotFound, Conflict, InternalServerError
-from flask_limiter.util import get_remote_address
 from flask_jwt_extended import jwt_required
+from werkzeug.exceptions import BadRequest, NotFound, Conflict, InternalServerError
 
 from app.core.extensions import limiter
 from app.v1.utils import user_id_from_token_key
-from app.core.database import db_session
-from app.v1.utils import api_response, token_required, cprofile
+from app.v1.utils import api_response, token_required
 from app.v1.models import User, Post, Follow
 from app.v1.schemas.base import Pagination
 from app.v1.schemas.user import UserEdit, UserRead, UserReadList
@@ -20,13 +18,12 @@ userRoute = Blueprint("users", __name__, url_prefix="/users")
 
 @userRoute.route("/me", methods=["GET"])
 @token_required()
-@cprofile
 def view_profile(current_user: User):
     try:
         user_profile = current_user.to_dict(
             viewer=current_user, excludes=["is_following"]
         )
-    except ValueError as error:
+    except ValueError:
         raise InternalServerError(
             f"Error while fetching user {current_user.id} profile."
         )

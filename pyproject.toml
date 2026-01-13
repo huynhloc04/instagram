@@ -1,9 +1,9 @@
 [tool.poetry]
-name = "python-flask"
+name = "insta"
 version = "0.1.0"
-description = "Start a simple web app with the Flask framework for Python"
-authors = ["Google LLC"]
-packages = [{include = "app"}]
+description = ""
+authors = ["huynhloc04"]
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -35,11 +35,10 @@ flask-mail = "^0.10.0"
 secure-smtplib = "^0.1.1"
 celery = "^5.5.3"
 flower = "^2.0.1"
-
-[tool.poetry.scripts]
-app = 'app.main:main'
-
-[tool.poetry.group.dev.dependencies]
+elasticsearch = "^8.15.0"
+elasticsearch-dsl = "^8.15.0"
+flask-cors = "^6.0.1"
+dependency-injector = "^4.48.3"
 
 [build-system]
 requires = ["poetry-core"]

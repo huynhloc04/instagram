@@ -9,6 +9,7 @@ __pycache__/
 *.log
 .secrets
 # Development and documentation
+.venv
 .git/
 .vscode/
 .gitignore

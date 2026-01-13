@@ -1,12 +1,15 @@
-#!/usr/bin/env python3
 """
-Celery worker entry point for Instagram backend.
-Configured with Flask app context for template rendering.
+Celery worker entry point.
+Used by: celery -A app.celery_worker.celery worker
 """
 
-from app.v1 import create_app
-from app.core.celery import celery, init_celery
+from app.core.celery import init_celery_worker
+from app.main import create_app
 
-# Create Flask app and configure Celery with context
+# Create Flask app
 app = create_app()
-init_celery(app)
+container = app.container
+
+# Create Celery from DI
+celery = container.celery_app()
+init_celery_worker(celery, app)
