@@ -86,3 +86,4 @@ def send_account_activation_confirmation_email(user: User):
         recipient=user.email,
         idempotency_key=idempotency_key,
     )
+

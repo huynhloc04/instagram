@@ -11,6 +11,7 @@ from app.core.redis import redis_client
 
 settings = get_settings()
 
+
 @celery.task(
     bind=True, autoretry_for=(Exception,), retry_kwargs={'max_retries': 3}, retry_backoff=True
 )
@@ -52,3 +53,4 @@ def send_mail(
     except Exception as e:
         current_app.logger.error(f"Error while sending email: {e}")
         raise self.retry(exc=e)
+

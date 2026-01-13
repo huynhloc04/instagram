@@ -1,4 +1,4 @@
-import os, time
+import os
 from pathlib import Path
 import cProfile
 import pstats
@@ -6,14 +6,14 @@ import io
 from functools import wraps
 from datetime import datetime
 
-from flask import jsonify, request, g
+from flask import jsonify, request
 from functools import wraps
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 from flask_limiter.util import get_remote_address
-from werkzeug.exceptions import Unauthorized, BadRequest, Forbidden
+from werkzeug.exceptions import Unauthorized, BadRequest
 
 from app.v1.models import User
-from app.logs.config import REQUEST_COUNT, REQUEST_LATENCY
+# from app.logs.config import REQUEST_COUNT, REQUEST_LATENCY
 
 
 ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
@@ -28,7 +28,7 @@ def api_response(data=None, message=None, status=200):
     return jsonify(response), status
 
 
-def token_required(require_account_verified: bool = False):
+def token_required():
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -36,11 +36,8 @@ def token_required(require_account_verified: bool = False):
                 verify_jwt_in_request()
                 user_id = get_jwt_identity()
             except Exception as error:
-                return Unauthorized(f"Token is invalid: {str(error)}")
-            user = User.query.filter_by(id=int(user_id)).first()
-            if require_account_verified and not user.is_verified:
-                raise Forbidden("You must verify your account to access this resource.")
-            kwargs["current_user"] = user
+                raise Unauthorized(f"Token is invalid: {str(error)}")
+            kwargs["current_user_id"] = int(user_id)
             return func(*args, **kwargs)
         return wrapper
     return decorator
@@ -88,24 +85,6 @@ def find_file(filename: str, start_dir: Path = Path.cwd()) -> Path | None:
     for path in start_dir.rglob(filename):
         return path.resolve()
     return None or ""
-
-
-def register_dependencies(app):
-
-    @app.before_request
-    def start_timer():
-        g.start_time = time.time()
-
-    @app.after_request
-    def record_metrics(response):
-        start_time = getattr(g, "start_time", None)
-        if start_time is not None:
-            latency = time.time() - start_time
-            REQUEST_COUNT.labels(
-                request.method, request.path, response.status_code
-            ).inc()
-            REQUEST_LATENCY.labels(request.method, request.path).observe(latency)
-        return response
 
 
 def cprofile(func):

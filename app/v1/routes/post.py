@@ -3,13 +3,12 @@ from flask import Blueprint, current_app, request
 from werkzeug.exceptions import BadRequest, NotFound, Conflict, Forbidden
 
 from app.core.extensions import limiter
-from app.core.database import db_session
-from app.v1.models import Post, User, Like, ImageCron, Comment, PostTag, Tag
+from app.v1.models.post import Post, User, Like, ImageCron, Comment, PostTag, Tag
 from app.v1.schemas.base import Pagination
 from app.v1.schemas.post import PostCreate, PostEdit, PostReadList, CommentReadList, CommentTree
 from app.v1.services.post import create_post, update_post, get_base_comment_and_count, create_tags
 from app.v1.enums import PostStatus, ImageCronEnum
-from app.v1.storage import _generate_put_singed_url, _generate_get_singed_url
+from app.core.gcs import _generate_put_singed_url, _generate_get_singed_url
 from app.v1.utils import user_id_from_token_key
 from app.v1.utils import (
     api_response,

@@ -2,7 +2,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 
-from prometheus_client import Counter, Gauge, Histogram, Summary
+from prometheus_client import Counter, Histogram
 
 #   ==================================================
 #   =============== Prometheus Logging ===============
@@ -20,15 +20,21 @@ REQUEST_LATENCY = Histogram(
     ["method", "endpoint"],
 )
 
+'''
+With this code:
+- Knows nothing about Flask
+- Knows nothing about services
+- Just configures Python logging
+=> Seperate of concerns
+'''
 
-def init_logging(app):
+
+def configure_logging(log_level: str = "INFO", log_file: str | None = None):
     log_dir = "app/logs"
     os.makedirs(log_dir, exist_ok=True)
 
-    log_file = os.path.join(log_dir, "app.log")
-
     formatter = logging.Formatter(
-        "[%(asctime)s] %(levelname)s in %(module)s: %(message)s"
+        "[%(asctime)s] %(levelname)s: %(message)s"
     )
 
     # Create a rotating file handler (5MB per file, keep 5 files)
@@ -36,15 +42,12 @@ def init_logging(app):
         log_file, maxBytes=5 * 1024 * 1024, backupCount=5
     )
     file_handler.setFormatter(formatter)
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(log_level)
 
     # Log to console as well
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
-    console_handler.setLevel(logging.WARNING)
+    console_handler.setLevel(log_level)
 
-    app.logger.addHandler(file_handler)
-    app.logger.addHandler(console_handler)
-
-    #   Set level for app handler
-    app.logger.setLevel(logging.DEBUG)
+    logging.getLogger().addHandler(file_handler)
+    logging.getLogger().addHandler(console_handler)

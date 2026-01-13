@@ -32,7 +32,11 @@ WORKDIR /instagram
 
 ARG VIRTUAL_ENV
 
-ENV PATH="${VIRTUAL_ENV}/bin:$PATH"
+ENV PATH="${VIRTUAL_ENV}/bin:$PATH" \
+    VIRTUAL_ENV=${VIRTUAL_ENV}
+
+# Install curl for health checks
+RUN apk add --no-cache curl
 
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 
